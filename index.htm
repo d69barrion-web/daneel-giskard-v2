@@ -637,6 +637,34 @@ body.light .user .bubble {
     max-height:calc(100dvh - 16px);
   }
 }
+  
+.message-actions {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 7px;
+}
+
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.copy-btn:active {
+  opacity: 0.65;
+}
+
+.copy-btn.copied {
+  color: var(--accent);
+}
+
 </style>
 </head>
 
@@ -1461,7 +1489,6 @@ function showWelcome() {
 
 }
 
-
 function renderMessages() {
 
   const conversation = getActiveConversation();
@@ -1477,7 +1504,7 @@ function renderMessages() {
   }
 
   $("messages").innerHTML =
-    conversation.messages.map(message => {
+    conversation.messages.map((message, index) => {
 
       const isUser = message.role === "user";
 
@@ -1494,6 +1521,21 @@ function renderMessages() {
               ${escapeHTML(message.content)}
             </div>
 
+            ${!isUser ? `
+              <div class="message-actions">
+                <button
+                  class="copy-btn"
+                  data-index="${index}"
+                  type="button"
+                  title="Copy response"
+                  aria-label="Copy response"
+                >
+                  <span class="copy-icon">📋</span>
+                  <span>Copy</span>
+                </button>
+              </div>
+            ` : ""}
+
           </div>
 
         </div>
@@ -1504,6 +1546,42 @@ function renderMessages() {
   scrollToBottom();
 
 }
+
+$("messages").addEventListener("click", async (event) => {
+
+  const button = event.target.closest(".copy-btn");
+
+  if (!button) return;
+
+  const index = Number(button.dataset.index);
+
+  const conversation = getActiveConversation();
+
+  if (!conversation) return;
+
+  const message = conversation.messages[index];
+
+  if (!message) return;
+
+  try {
+
+    await navigator.clipboard.writeText(message.content);
+
+    button.innerHTML = "✓ Copied!";
+    button.classList.add("copied");
+
+    setTimeout(() => {
+      button.innerHTML = "📋 Copy";
+      button.classList.remove("copied");
+    }, 1500);
+
+  } catch (error) {
+
+    alert("Hindi makopya ang message. Subukan ulit.");
+
+  }
+
+});
 
 
 function addMessage(role, content) {
