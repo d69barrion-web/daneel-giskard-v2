@@ -665,6 +665,185 @@ body.light .user .bubble {
   color: var(--accent);
 }
 
+/* MARKDOWN */
+
+.bubble h1,
+.bubble h2,
+.bubble h3,
+.bubble h4 {
+  margin: 16px 0 9px;
+  line-height: 1.35;
+}
+
+.bubble p {
+  margin: 8px 0;
+}
+
+.bubble ul,
+.bubble ol {
+  padding-left: 24px;
+  margin: 9px 0;
+}
+
+.bubble li {
+  margin: 5px 0;
+}
+
+.bubble blockquote {
+  margin: 12px 0;
+  padding: 8px 13px;
+  border-left: 3px solid var(--accent);
+  background: var(--panel);
+  border-radius: 5px;
+}
+
+.bubble table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  display: block;
+  overflow-x: auto;
+}
+
+.bubble th,
+.bubble td {
+  border: 1px solid var(--border);
+  padding: 8px;
+  text-align: left;
+}
+
+.bubble th {
+  background: var(--panel);
+}
+
+.bubble a {
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+.bubble :not(pre) > code {
+  background: var(--panel);
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: .9em;
+}
+
+
+/* CODE BLOCK */
+
+.code-block {
+  margin: 13px 0;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  overflow: hidden;
+  background: var(--panel);
+  max-width: 100%;
+}
+
+.code-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 11px;
+  background: var(--panel2);
+  border-bottom: 1px solid var(--border);
+}
+
+.code-language {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.code-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.code-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.code-action:active {
+  opacity: .6;
+}
+
+.code-block pre {
+  margin: 0;
+  padding: 13px;
+  overflow-x: auto;
+  white-space: pre;
+  font-size: 13px;
+  line-height: 1.6;
+  tab-size: 2;
+}
+
+.code-block pre code {
+  font-family: monospace;
+}
+
+
+/* PREVIEW MODAL */
+
+.preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(0,0,0,.72);
+}
+
+.preview-panel {
+  width: 100%;
+  max-width: 850px;
+  height: 85vh;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-header {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.preview-close {
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 20px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.preview-frame {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: white;
+}
+
 </style>
 </head>
 
@@ -928,10 +1107,14 @@ body.light .user .bubble {
 </div>
 
 
+
+
 <!-- FIREBASE AND APPLICATION LOGIC -->
 
 <script type="module">
+import { marked } from "https://cdn.jsdelivr.net/npm/marked@15.0.12/lib/marked.esm.js";
 
+import DOMPurify from "https://cdn.jsdelivr.net/npm/dompurify@3.2.6/+esm";
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
@@ -1051,6 +1234,97 @@ function escapeHTML(value) {
       "'":"&#39;"
     })[char]
   );
+
+}
+  
+// ==========================================
+// MARKDOWN AND CODE BLOCK RENDERER
+// ==========================================
+
+let renderedCodeBlocks = [];
+
+const markdownRenderer = new marked.Renderer();
+
+markdownRenderer.code = function ({ text, lang }) {
+
+  const code = text;
+  const language = (lang || "text").split(" ")[0].toLowerCase();
+
+  const index = renderedCodeBlocks.length;
+
+  renderedCodeBlocks.push({
+    code,
+    language
+  });
+
+  const canPreview = [
+    "html",
+    "html5",
+    "css",
+    "js",
+    "javascript"
+  ].includes(language);
+
+  return `
+    <div class="code-block">
+
+      <div class="code-header">
+
+        <span class="code-language">
+          ${escapeHTML(language)}
+        </span>
+
+        <div class="code-actions">
+
+          <button
+            class="code-action"
+            data-code-copy="${index}"
+            type="button"
+            title="Copy code"
+          >
+            <span>📋</span>
+            <span>Copy</span>
+          </button>
+
+          ${canPreview ? `
+            <button
+              class="code-action"
+              data-code-preview="${index}"
+              type="button"
+              title="Live Preview"
+            >
+              <span>▶</span>
+              <span>Preview</span>
+            </button>
+          ` : ""}
+
+        </div>
+
+      </div>
+
+      <pre><code>${escapeHTML(code)}</code></pre>
+
+    </div>
+  `;
+
+};
+
+marked.setOptions({
+  breaks: true,
+  gfm: true
+});
+
+
+function renderMarkdown(content) {
+
+  const html = marked.parse(
+    String(content || ""),
+    {
+      renderer: markdownRenderer
+    }
+  );
+
+  return DOMPurify.sanitize(html);
 
 }
 
@@ -1493,20 +1767,21 @@ function renderMessages() {
 
   const conversation = getActiveConversation();
 
-  if (!conversation) {
+  if (!conversation || !conversation.messages.length) {
     showWelcome();
     return;
   }
 
-  if (!conversation.messages.length) {
-    showWelcome();
-    return;
-  }
+  renderedCodeBlocks = [];
 
   $("messages").innerHTML =
     conversation.messages.map((message, index) => {
 
       const isUser = message.role === "user";
+
+      const messageHTML = isUser
+        ? escapeHTML(message.content)
+        : renderMarkdown(message.content);
 
       return `
         <div class="message ${isUser ? "user" : "bot"}">
@@ -1518,23 +1793,19 @@ function renderMessages() {
             </div>
 
             <div class="bubble">
-              ${escapeHTML(message.content)}
+              ${messageHTML}
             </div>
 
-            
-              <div class="message-actions">
-                <button
-                  class="copy-btn"
-                  data-index="${index}"
-                  type="button"
-                  title="Copy response"
-                  aria-label="Copy response"
-                >
-                  <span class="copy-icon">📋</span>
-                  <span>Copy</span>
-                </button>
-              </div>
-            
+            <div class="message-actions">
+              <button
+                class="copy-btn"
+                data-message-copy="${index}"
+                type="button"
+                title="Copy message"
+              >
+                📋 Copy
+              </button>
+            </div>
 
           </div>
 
@@ -1547,42 +1818,213 @@ function renderMessages() {
 
 }
 
-$("messages").addEventListener("click", async (event) => {
 
-  const button = event.target.closest(".copy-btn");
+// ==========================================
+// MESSAGE AND CODE ACTIONS
+// ==========================================
 
-  if (!button) return;
+$("messages").addEventListener("click", async event => {
 
-  const index = Number(button.dataset.index);
+  const messageButton =
+    event.target.closest("[data-message-copy]");
 
-  const conversation = getActiveConversation();
+  const codeButton =
+    event.target.closest("[data-code-copy]");
 
-  if (!conversation) return;
+  const previewButton =
+    event.target.closest("[data-code-preview]");
 
-  const message = conversation.messages[index];
 
-  if (!message) return;
+  // Copy entire message
 
-  try {
+  if (messageButton) {
 
-    await navigator.clipboard.writeText(message.content);
+    const conversation = getActiveConversation();
 
-    button.innerHTML = "✓ Copied!";
-    button.classList.add("copied");
+    const index = Number(
+      messageButton.dataset.messageCopy
+    );
 
-    setTimeout(() => {
-      button.innerHTML = "📋 Copy";
-      button.classList.remove("copied");
-    }, 1500);
+    const message = conversation?.messages[index];
 
-  } catch (error) {
+    if (!message) return;
 
-    alert("Hindi makopya ang message. Subukan ulit.");
+    await copyText(
+      message.content,
+      messageButton
+    );
+
+    return;
+  }
+
+
+  // Copy code only
+
+  if (codeButton) {
+
+    const index = Number(
+      codeButton.dataset.codeCopy
+    );
+
+    const item = renderedCodeBlocks[index];
+
+    if (!item) return;
+
+    await copyText(
+      item.code,
+      codeButton
+    );
+
+    return;
+  }
+
+
+  // Live preview
+
+  if (previewButton) {
+
+    const index = Number(
+      previewButton.dataset.codePreview
+    );
+
+    const item = renderedCodeBlocks[index];
+
+    if (!item) return;
+
+    openCodePreview(item.code, item.language);
 
   }
 
 });
 
+
+async function copyText(text, button) {
+
+  try {
+
+    await navigator.clipboard.writeText(text);
+
+    const original = button.innerHTML;
+
+    button.innerHTML = "✓ Copied!";
+    button.classList.add("copied");
+
+    setTimeout(() => {
+
+      button.innerHTML = original;
+      button.classList.remove("copied");
+
+    }, 1500);
+
+  } catch (error) {
+
+    alert("Hindi makopya ang text. Subukan ulit.");
+
+  }
+
+}
+
+function openCodePreview(code, language) {
+
+  const overlay = document.createElement("div");
+
+  overlay.className = "preview-overlay";
+
+  const panel = document.createElement("div");
+
+  panel.className = "preview-panel";
+
+  const header = document.createElement("div");
+
+  header.className = "preview-header";
+
+  header.innerHTML = `
+    <strong>Live Preview</strong>
+    <button type="button" class="preview-close">
+      ✕
+    </button>
+  `;
+
+  const frame = document.createElement("iframe");
+
+  frame.className = "preview-frame";
+
+  // Sandboxed: scripts are allowed, but same-origin access
+  // and access to the parent page are not granted.
+  frame.setAttribute("sandbox", "allow-scripts");
+
+  let documentContent = code;
+
+  if (language === "css") {
+
+    documentContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>${code}</style>
+      </head>
+      <body>
+        <h2>CSS Preview</h2>
+        <p>Sample paragraph</p>
+        <button>Sample button</button>
+      </body>
+      </html>
+    `;
+
+  } else if (
+    language === "js" ||
+    language === "javascript"
+  ) {
+
+    documentContent = `
+      <!DOCTYPE html>
+      <html>
+      <body>
+        <h2>JavaScript Preview</h2>
+        <div id="output"></div>
+        <script>${code}<\/script>
+      </body>
+      </html>
+    `;
+
+  }
+
+  frame.srcdoc = documentContent;
+
+  panel.append(header, frame);
+  overlay.appendChild(panel);
+
+  document.body.appendChild(overlay);
+
+  function closePreview() {
+    overlay.remove();
+  }
+
+  header.querySelector(".preview-close")
+    .addEventListener("click", closePreview);
+
+  overlay.addEventListener("click", event => {
+
+    if (event.target === overlay) {
+      closePreview();
+    }
+
+  });
+
+  document.addEventListener("keydown", function escapePreview(event) {
+
+    if (event.key === "Escape") {
+      closePreview();
+
+      document.removeEventListener(
+        "keydown",
+        escapePreview
+      );
+    }
+
+  });
+
+}
 
 function addMessage(role, content) {
 
