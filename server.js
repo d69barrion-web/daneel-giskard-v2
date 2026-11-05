@@ -512,6 +512,8 @@ async function runDaneel({
     }
   ];
 
+    
+  let response = await openai.responses.create(
     {
       model: MODEL,
 
@@ -534,6 +536,7 @@ async function runDaneel({
 
   let totalToolCalls = 0;
   let finished = false;
+
 
   // AI may request tools multiple times.
   // The backend controls the maximum rounds.
