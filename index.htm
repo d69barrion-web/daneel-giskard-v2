@@ -1257,19 +1257,23 @@ function escapeHTML(value) {
 // ==========================================
 
 let renderedCodeBlocks = [];
+let currentRenderingMessageIndex = -1;
 
 const markdownRenderer = new marked.Renderer();
 
 markdownRenderer.code = function ({ text, lang }) {
 
   const code = text;
-  const language = (lang || "text").split(" ")[0].toLowerCase();
+  const language = (lang || "text")
+    .split(" ")[0]
+    .toLowerCase();
 
   const index = renderedCodeBlocks.length;
 
   renderedCodeBlocks.push({
     code,
-    language
+    language,
+    messageIndex: currentRenderingMessageIndex
   });
 
   const canPreview = [
@@ -1318,6 +1322,7 @@ markdownRenderer.code = function ({ text, lang }) {
       </div>
 
       <pre><code class="language-${escapeHTML(language)}">${escapeHTML(code)}</code></pre>
+
     </div>
   `;
 
@@ -1327,7 +1332,6 @@ marked.setOptions({
   breaks: true,
   gfm: true
 });
-
 
 function renderMarkdown(content) {
 
