@@ -559,27 +559,41 @@ app.get("/health", (req, res) => {
 app.post(
   "/chat",
   requireAuth,
+  chatImageUpload.array("images", 4),
   async (req, res) => {
 
     try {
 
-      const message = req.body?.message;
+      const message =
+        typeof req.body?.message === "string"
+          ? req.body.message
+          : "";
 
-      const history = req.body?.history || [];
+      // Support both JSON requests and multipart/form-data.
+      let history = req.body?.history || [];
 
-      if (
-        typeof message !== "string" ||
-        !message.trim()
-      ) {
+      if (typeof history === "string") {
+        try {
+          history = JSON.parse(history);
+        } catch {
+          return res.status(400).json({
+            ok: false,
+            error: "Invalid conversation history."
+          });
+        }
+      }
+
+      const uploadedFiles = req.files || [];
+
+      // A message may contain text, images, or both.
+      if (!message.trim() && uploadedFiles.length === 0) {
         return res.status(400).json({
           ok: false,
-          error: "A valid message is required."
+          error: "A message or image is required."
         });
       }
 
-      if (
-        message.length > MAX_MESSAGE_CHARS
-      ) {
+      if (message.length > MAX_MESSAGE_CHARS) {
         return res.status(413).json({
           ok: false,
           error: "Message exceeds the configured limit."
@@ -593,9 +607,7 @@ app.post(
         });
       }
 
-      if (
-        history.length > MAX_HISTORY_MESSAGES
-      ) {
+      if (history.length > MAX_HISTORY_MESSAGES) {
         return res.status(400).json({
           ok: false,
           error: "Too many history messages."
@@ -622,13 +634,18 @@ app.post(
 
       });
 
+      // Convert uploaded images into base64 data.
+      const images = uploadedFiles.map(file => ({
+        mimeType: file.mimetype,
+        data: file.buffer.toString("base64")
+      }));
+
       const result = await runDaneel({
         user: req.user,
         message: message.trim(),
-        history: cleanHistory
+        history: cleanHistory,
+        images
       });
-
-      // Consistent JSON response for the frontend.
 
       return res.json({
         ok: true,
@@ -665,7 +682,6 @@ app.post(
 
   }
 );
-
 
 // ==========================================
 // 11. IMAGE GENERATION ENDPOINT
