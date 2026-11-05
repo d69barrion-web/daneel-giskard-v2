@@ -1953,7 +1953,17 @@ $("messages").addEventListener("click", async event => {
     openCodePreview(item.code, item.language);
 
   }
+// Run combined project
 
+if (projectButton) {
+
+  const messageIndex = Number(
+    projectButton.dataset.runProject
+  );
+
+  openCombinedProject(messageIndex);
+
+}
 });
 
 
