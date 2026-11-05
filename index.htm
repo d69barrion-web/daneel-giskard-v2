@@ -2609,6 +2609,48 @@ function addMessage(role, content) {
 
 }
 
+async function addUserImageMessage({
+  imageId,
+  prompt
+}) {
+
+  if (!currentUser) {
+    throw new Error("Please sign in first.");
+  }
+
+  const conversation =
+    getActiveConversation() || createConversation();
+
+  conversation.messages.push({
+
+    role: "user",
+
+    content: prompt || "Image attached.",
+
+    type: "image",
+
+    imageId,
+
+    imageMode: "attachment",
+
+    createdAt: Date.now()
+
+  });
+
+  conversation.updatedAt = Date.now();
+
+  if (conversation.title === "New conversation") {
+    conversation.title = "Image conversation";
+  }
+
+  saveLocalData();
+
+  renderConversationList();
+
+  renderMessages();
+
+}
+
 async function addImageMessage({
   imageId,
   prompt,
