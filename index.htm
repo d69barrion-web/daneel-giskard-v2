@@ -1893,6 +1893,9 @@ $("messages").addEventListener("click", async event => {
   const previewButton =
     event.target.closest("[data-code-preview]");
 
+  const projectButton =
+    event.target.closest("[data-run-project]");
+
 
   // Copy entire message
 
@@ -1952,18 +1955,23 @@ $("messages").addEventListener("click", async event => {
 
     openCodePreview(item.code, item.language);
 
+    return;
   }
-// Run combined project
 
-if (projectButton) {
 
-  const messageIndex = Number(
-    projectButton.dataset.runProject
-  );
+  // Run combined project
 
-  openCombinedProject(messageIndex);
+  if (projectButton) {
 
-}
+    const messageIndex = Number(
+      projectButton.dataset.runProject
+    );
+
+    openCombinedProject(messageIndex);
+
+    return;
+  }
+
 });
 
 
