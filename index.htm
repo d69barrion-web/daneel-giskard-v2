@@ -1950,7 +1950,46 @@ function showWelcome() {
   `;
 
 }
+let activeImageObjectURLs = [];
 
+async function loadConversationImages() {
+
+  // Linisin ang dating object URLs
+  activeImageObjectURLs.forEach(url => {
+    URL.revokeObjectURL(url);
+  });
+
+  activeImageObjectURLs = [];
+
+  const imageElements = $("messages").querySelectorAll(
+    "[data-image-display]"
+  );
+
+  for (const imageElement of imageElements) {
+
+    const imageId = imageElement.dataset.imageDisplay;
+
+    try {
+      const record = await getImageBlob(imageId);
+
+      if (!record) {
+        imageElement.alt = "Image unavailable in this browser.";
+        continue;
+      }
+
+      const imageURL = URL.createObjectURL(record.blob);
+
+      activeImageObjectURLs.push(imageURL);
+
+      imageElement.src = imageURL;
+
+    } catch (error) {
+      console.error("Unable to load image:", error);
+      imageElement.alt = "Unable to load image.";
+    }
+  }
+}
+  
 function renderMessages() {
 
   const conversation = getActiveConversation();
@@ -1967,10 +2006,46 @@ function renderMessages() {
 
       const isUser = message.role === "user";
 
-      let messageHTML = escapeHTML(message.content);
+      let messageHTML = escapeHTML(message.content || "");
       let projectButton = "";
 
-      if (!isUser) {
+      // IMAGE MESSAGE
+      if (message.type === "image") {
+
+        const imageId = escapeHTML(message.imageId || "");
+
+        messageHTML = `
+          <div class="image-message">
+
+            <img
+              data-image-display="${imageId}"
+              alt="Generated image"
+              style="
+                display:block;
+                width:100%;
+                max-width:100%;
+                height:auto;
+                border-radius:12px;
+                margin-top:8px;
+              "
+            >
+
+            <button
+              class="code-action"
+              data-image-download="${imageId}"
+              type="button"
+              style="margin-top:10px;"
+            >
+              ⬇ Download Image
+            </button>
+
+          </div>
+        `;
+
+      }
+
+      // NORMAL ASSISTANT MESSAGE
+      else if (!isUser) {
 
         currentRenderingMessageIndex = index;
 
@@ -2018,6 +2093,7 @@ function renderMessages() {
             </div>
 
             <div class="message-actions">
+
               ${projectButton}
 
               <button
@@ -2028,6 +2104,7 @@ function renderMessages() {
               >
                 📋 Copy
               </button>
+
             </div>
 
           </div>
@@ -2044,10 +2121,12 @@ function renderMessages() {
     hljs.highlightElement(block);
   });
 
+  // Load images saved in IndexedDB
+  loadConversationImages();
+
   scrollToBottom();
 }
-
-
+  
 // ==========================================
 // MESSAGE AND CODE ACTIONS
 // ==========================================
