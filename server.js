@@ -1,8 +1,10 @@
 
 import express from "express";
 import cors from "cors";
-import OpenAI from "openai";
+import OpenAI, { toFile } from "openai";
 import admin from "firebase-admin";
+import multer from "multer";
+import { createHash } from "node:crypto";
 
 // ==========================================
 // 1. BASIC CONFIGURATION
