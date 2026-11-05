@@ -590,7 +590,6 @@ app.get("/health", (req, res) => {
 // ==========================================
 // 10. MAIN CHAT ENDPOINT
 // ==========================================
-
 app.post(
   "/chat",
   requireAuth,
@@ -604,7 +603,6 @@ app.post(
           ? req.body.message
           : "";
 
-      // Support both JSON requests and multipart/form-data.
       let history = req.body?.history || [];
 
       if (typeof history === "string") {
@@ -620,7 +618,6 @@ app.post(
 
       const uploadedFiles = req.files || [];
 
-      // A message may contain text, images, or both.
       if (!message.trim() && uploadedFiles.length === 0) {
         return res.status(400).json({
           ok: false,
@@ -649,6 +646,13 @@ app.post(
         });
       }
 
+      // Convert uploaded images into base64 data.
+      const images = uploadedFiles.map(file => ({
+        mimeType: file.mimetype,
+        data: file.buffer.toString("base64")
+      }));
+
+      // Validate and preserve image references in history.
       const cleanHistory = history.map(item => {
 
         if (
@@ -662,18 +666,37 @@ app.post(
           );
         }
 
-        return {
+        const cleanItem = {
           role: item.role,
           content: item.content
         };
 
-      });
+        if (item.type === "image") {
 
-      // Convert uploaded images into base64 data.
-      const images = uploadedFiles.map(file => ({
-        mimeType: file.mimetype,
-        data: file.buffer.toString("base64")
-      }));
+          if (
+            !Number.isInteger(item.imageIndex) ||
+            item.imageIndex < 0 ||
+            item.imageIndex >= images.length
+          ) {
+            throw new Error(
+              "Invalid or missing historical image reference."
+            );
+          }
+
+          cleanItem.type = "image";
+          cleanItem.imageIndex = item.imageIndex;
+
+          if (
+            typeof item.imageMode === "string"
+          ) {
+            cleanItem.imageMode = item.imageMode;
+          }
+
+        }
+
+        return cleanItem;
+
+      });
 
       const result = await runDaneel({
         user: req.user,
