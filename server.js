@@ -342,10 +342,12 @@ async function executeTool(
 // 8. OPENAI TOOL-CALLING ORCHESTRATOR
 // ==========================================
 
+
 async function runDaneel({
   user,
   message,
-  history
+  history,
+  images = []
 }) {
 
   if (!openai) {
@@ -354,11 +356,54 @@ async function runDaneel({
     );
   }
 
+  // Prepare the current user's message.
+  // Text and images can coexist in one message.
+
+  const userContent = [];
+
+  if (message.trim()) {
+    userContent.push({
+      type: "input_text",
+      text: message.trim()
+    });
+  }
+
+  if (images.length > 0) {
+
+    userContent.push({
+      type: "input_text",
+      text:
+        `The user attached ${images.length} image(s). ` +
+        "Examine the attached image(s) when relevant " +
+        "to the user's message. If the user refers to " +
+        "an image ambiguously and multiple images are " +
+        "available, ask which image they mean instead " +
+        "of guessing."
+    });
+
+    images.forEach((image, index) => {
+
+      userContent.push({
+        type: "input_text",
+        text: `Attached image ${index + 1}:`
+      });
+
+      userContent.push({
+        type: "input_image",
+        image_url:
+          `data:${image.mimeType};base64,${image.data}`,
+        detail: "auto"
+      });
+
+    });
+
+  }
+
   const input = [
     ...history,
     {
       role: "user",
-      content: message
+      content: userContent
     }
   ];
 
@@ -406,9 +451,6 @@ async function runDaneel({
       item => item.type === "function_call"
     );
 
-    // No more tool requests:
-    // AI has completed its response.
-
     if (calls.length === 0) {
       finished = true;
       break;
@@ -423,9 +465,6 @@ async function runDaneel({
         "Daneel reached its tool execution limit."
       );
     }
-
-    // Execute requested tools.
-    // Multiple independent calls may run together.
 
     const outputs = await Promise.all(
       calls.map(async call => {
@@ -478,10 +517,6 @@ async function runDaneel({
     );
 
     totalToolCalls += calls.length;
-
-    // Send tool results back to the AI.
-    // It may request more tools or produce
-    // its final response.
 
     response = await openai.responses.create(
       {
