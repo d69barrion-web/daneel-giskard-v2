@@ -354,22 +354,24 @@ async function runDaneel({
     );
   }
 
-  // Track which images are already assigned
-  // to historical messages.
+    // Track images assigned to historical messages.
   const historicalImageIndexes = new Set();
 
-  // Rebuild conversation history with images
-  // placed in their original messages.
-  const inputHistory = history.map(item => {
+  const inputHistory = [];
+
+  // Rebuild conversation history.
+  for (const item of history) {
 
     if (
       item.type !== "image" ||
       !Number.isInteger(item.imageIndex)
     ) {
-      return {
+      inputHistory.push({
         role: item.role,
         content: item.content
-      };
+      });
+
+      continue;
     }
 
     const image = images[item.imageIndex];
@@ -382,26 +384,73 @@ async function runDaneel({
 
     historicalImageIndexes.add(item.imageIndex);
 
-    return {
-      role: item.role,
+    const imageDataURL =
+      `data:${image.mimeType};base64,${image.data}`;
 
-      content: [
-        {
-          type: "input_text",
-          text: item.content || "Image attached."
-        },
-        {
-          type: "input_image",
-          image_url:
-            `data:${image.mimeType};base64,${image.data}`,
-          detail: "auto"
-        }
-      ]
-    };
+    // User-uploaded historical image:
+    // Keep the image inside its original user message.
+    if (item.role === "user") {
 
-  });
+      inputHistory.push({
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: item.content || "Image attached."
+          },
+          {
+            type: "input_image",
+            image_url: imageDataURL,
+            detail: "auto"
+          }
+        ]
+      });
 
-  // Prepare the current message.
+    }
+
+    // Daneel-generated or edited historical image:
+    // Keep the assistant message as text.
+    // Attach the actual image through a separate user message.
+    else if (item.role === "assistant") {
+
+      inputHistory.push({
+        role: "assistant",
+        content: item.content || "Image generated."
+      });
+
+      const imageDescription =
+        item.imageMode === "edit"
+          ? "Previously edited image by Daneel."
+          : "Previously generated image by Daneel.";
+
+      inputHistory.push({
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text:
+              `[Visual context from an earlier assistant response: ` +
+              `${imageDescription}]\n` +
+              `Original prompt or description: ${item.content || "Not available."}`
+          },
+          {
+            type: "input_image",
+            image_url: imageDataURL,
+            detail: "auto"
+          }
+        ]
+      });
+
+    }
+
+    else {
+      throw new Error(
+        "Unsupported historical image message role."
+      );
+    }
+  }
+
+  // Prepare the current user message.
   const userContent = [];
 
   if (message.trim()) {
@@ -411,11 +460,12 @@ async function runDaneel({
     });
   }
 
-  // Any images not referenced by historical messages
-  // are treated as newly attached images.
+  // Find newly attached images.
   const newImageIndexes = images
     .map((image, index) => index)
-    .filter(index => !historicalImageIndexes.has(index));
+    .filter(
+      index => !historicalImageIndexes.has(index)
+    );
 
   if (newImageIndexes.length > 0) {
 
@@ -445,18 +495,23 @@ async function runDaneel({
       });
 
     });
-
   }
 
   const input = [
     ...inputHistory,
     {
       role: "user",
-      content: userContent
+      content: userContent.length > 0
+        ? userContent
+        : [
+            {
+              type: "input_text",
+              text: message.trim()
+            }
+          ]
     }
   ];
 
-  let response = await openai.responses.create(
     {
       model: MODEL,
 
