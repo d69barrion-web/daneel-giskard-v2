@@ -2859,8 +2859,14 @@ let preparedHistory = null;
 
   try {
 
-    const token = await currentUser.getIdToken();
+  if (mode === "chat") {
+    preparedHistory = await prepareChatHistory(
+      conversation,
+      attachedFile ? 1 : 0
+    );
+  }
 
+  const token = await currentUser.getIdToken();
     let response;
 
     // CHAT MODE
