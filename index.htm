@@ -921,32 +921,62 @@ body.light .user .bubble {
 
   <!-- COMPOSER -->
 
-  <footer class="composer-wrap">
+  
+<footer class="composer-wrap">
 
-    <div class="composer">
+  <div class="composer-mode-row">
 
-      <textarea
-        id="messageInput"
-        rows="1"
-        placeholder="Message Daneel..."
-        aria-label="Message Daneel">
-      </textarea>
+    <select id="composerMode" aria-label="Choose mode">
+      <option value="chat">💬 Chat</option>
+      <option value="generate">🎨 Create Image</option>
+      <option value="edit">🖼️ Edit Image</option>
+    </select>
 
-      <button class="send-btn"
-        id="sendButton"
-        aria-label="Send message">
-        ➤
-      </button>
+    <button
+      type="button"
+      id="chooseImageButton"
+      style="display:none;"
+    >
+      📎 Choose Image
+    </button>
 
-    </div>
+    <input
+      type="file"
+      id="imageFileInput"
+      accept="image/png,image/jpeg,image/webp"
+      hidden
+    >
 
-    <div class="composer-note">
-      Daneel Giskard v2
-    </div>
+  </div>
 
-    <div class="status" id="status"></div>
+  <div id="selectedImageName" style="display:none;"></div>
 
-  </footer>
+  <div class="composer">
+
+    <textarea
+      id="messageInput"
+      rows="1"
+      placeholder="Message Daneel..."
+      aria-label="Message Daneel">
+    </textarea>
+
+    <button
+      class="send-btn"
+      id="sendButton"
+      aria-label="Send message">
+      ➤
+    </button>
+
+  </div>
+
+  <div class="composer-note">
+    Daneel Giskard v2
+  </div>
+
+  <div class="status" id="status"></div>
+
+</footer>
+
 
 </div>
 
