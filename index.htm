@@ -2433,6 +2433,40 @@ function addMessage(role, content) {
 
 }
 
+async function addImageMessage({
+  imageId,
+  prompt,
+  mode
+}) {
+
+  if (!currentUser) {
+    throw new Error("Please sign in first.");
+  }
+
+  const conversation =
+    getActiveConversation() || createConversation();
+
+  conversation.messages.push({
+    role: "assistant",
+    content: prompt || "Image generated.",
+    type: "image",
+    imageId,
+    imageMode: mode,
+    createdAt: Date.now()
+  });
+
+  conversation.updatedAt = Date.now();
+
+  if (conversation.title === "New conversation") {
+    conversation.title =
+      (mode === "edit" ? "Edited image" : "Generated image");
+  }
+
+  saveLocalData();
+  renderConversationList();
+  renderMessages();
+
+}
 
 function scrollToBottom() {
 
