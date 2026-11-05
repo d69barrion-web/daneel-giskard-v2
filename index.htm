@@ -2785,7 +2785,6 @@ async function sendMessage() {
   const message = input.value.trim();
   const mode = $("composerMode").value;
 
-  // Allow image-only messages in Chat mode.
   if (!message && !(mode === "chat" && selectedImageFile)) {
     return;
   }
@@ -2811,10 +2810,12 @@ async function sendMessage() {
     conversation = createConversation();
   }
 
-  const previousMessages = conversation.messages.map(item => ({
-    role: item.role,
-    content: item.content
-  }));
+  // Capture history BEFORE adding the current message.
+  let preparedHistory = null;
+
+  if (mode === "chat") {
+    preparedHistory = await prepareChatHistory(conversation);
+  }
 
   const attachedFile =
     mode === "chat" ? selectedImageFile : null;
@@ -2852,9 +2853,9 @@ async function sendMessage() {
     // CHAT MODE
     if (mode === "chat") {
 
+      // Save and display the newly attached image.
       if (attachedFile) {
 
-        // Save the original uploaded image locally.
         const imageId = await saveImageBlob(
           attachedFile,
           {
@@ -2864,7 +2865,6 @@ async function sendMessage() {
           }
         );
 
-        // Add the image as a user message.
         await addUserImageMessage({
           imageId,
           prompt: message
@@ -2882,9 +2882,27 @@ async function sendMessage() {
 
       formData.append(
         "history",
-        JSON.stringify(previousMessages)
+        JSON.stringify(preparedHistory.history)
       );
 
+      // Append historical images FIRST.
+      preparedHistory.images.forEach((image, index) => {
+
+        const extension = {
+          "image/png": "png",
+          "image/jpeg": "jpg",
+          "image/webp": "webp"
+        }[image.mimeType] || "png";
+
+        formData.append(
+          "images",
+          image.blob,
+          `history-${index}.${extension}`
+        );
+
+      });
+
+      // Append the current attachment LAST.
       if (attachedFile) {
         formData.append("images", attachedFile);
       }
@@ -2913,7 +2931,6 @@ async function sendMessage() {
         data.chat?.text || "No response received."
       );
 
-      // Clear the selected attachment after processing.
       selectedImageFile = null;
       imageFileInput.value = "";
       selectedImageName.textContent = "";
