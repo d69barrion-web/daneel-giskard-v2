@@ -1417,36 +1417,57 @@ async function prepareChatHistory(
   const availableSlots = MAX_IMAGES - reserved;
   const messages = conversation.messages;
 
-  // Find the newest available historical images first.
-  const selectedImages = new Map();
-  const checkedImageIndexes = new Set();
-
-  for (
-    let i = messages.length - 1;
-    i >= 0 && selectedImages.size < availableSlots;
-    i--
-  ) {
-    const message = messages[i];
-
-    if (
-      message.type !== "image" ||
-      !message.imageId
-    ) {
-      continue;
-    }
-
-    checkedImageIndexes.add(i);
-
-    const record = await getImageBlob(
+  // Collect historical image messages.
+  const imageEntries = messages
+    .map((message, index) => ({
+      message,
+      index
+    }))
+    .filter(({ message }) =>
+      message.type === "image" &&
       message.imageId
     );
 
+  // Prioritize newest user uploads first.
+  const userImages = imageEntries
+    .filter(({ message }) =>
+      message.role === "user"
+    )
+    .reverse();
+
+  // Use remaining slots for newest Daneel images.
+  const assistantImages = imageEntries
+    .filter(({ message }) =>
+      message.role === "assistant"
+    )
+    .reverse();
+
+  const candidates = [
+    ...userImages,
+    ...assistantImages
+  ];
+
+  const selectedImages = new Map();
+  const checkedImages = new Set();
+
+  // Load images according to priority.
+  for (const entry of candidates) {
+    if (selectedImages.size >= availableSlots) {
+      break;
+    }
+
+    checkedImages.add(entry.index);
+
+    const record = await getImageBlob(
+      entry.message.imageId
+    );
+
     if (record) {
-      selectedImages.set(i, record);
+      selectedImages.set(entry.index, record);
     }
   }
 
-  // Rebuild history in its original chronological order.
+  // Rebuild history in chronological order.
   for (let i = 0; i < messages.length; i++) {
     const message = messages[i];
 
@@ -1478,7 +1499,7 @@ async function prepareChatHistory(
         historyItem.imageMode =
           message.imageMode || "generation";
 
-      } else if (checkedImageIndexes.has(i)) {
+      } else if (checkedImages.has(i)) {
         historyItem.content +=
           "\n[The original image is unavailable in this browser.]";
 
