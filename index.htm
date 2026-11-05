@@ -2926,34 +2926,42 @@ const chooseImageButton = $("chooseImageButton");
 const imageFileInput = $("imageFileInput");
 const selectedImageName = $("selectedImageName");
 
+
 composerMode.addEventListener("change", () => {
 
   const mode = composerMode.value;
 
   selectedImageFile = null;
   imageFileInput.value = "";
+
   selectedImageName.style.display = "none";
   selectedImageName.textContent = "";
 
-  if (mode === "edit") {
+  // Show image picker in Chat and Edit modes.
+  if (mode === "chat" || mode === "edit") {
 
     chooseImageButton.style.display = "inline-block";
 
-    $("messageInput").placeholder =
-      "Describe how you want to edit the image...";
+    chooseImageButton.textContent =
+      mode === "chat"
+        ? "📎 Attach Image"
+        : "📎 Choose Image";
 
   } else {
 
     chooseImageButton.style.display = "none";
 
-    $("messageInput").placeholder =
-      mode === "generate"
-        ? "Describe the image you want to create..."
-        : "Message Daneel...";
-
   }
 
+  $("messageInput").placeholder =
+    mode === "chat"
+      ? "Message Daneel or attach an image..."
+      : mode === "generate"
+        ? "Describe the image you want to create..."
+        : "Describe how you want to edit the image...";
+
 });
+
 
 chooseImageButton.addEventListener("click", () => {
   imageFileInput.click();
