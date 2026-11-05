@@ -341,8 +341,6 @@ async function executeTool(
 // ==========================================
 // 8. OPENAI TOOL-CALLING ORCHESTRATOR
 // ==========================================
-
-
 async function runDaneel({
   user,
   message,
@@ -356,9 +354,54 @@ async function runDaneel({
     );
   }
 
-  // Prepare the current user's message.
-  // Text and images can coexist in one message.
+  // Track which images are already assigned
+  // to historical messages.
+  const historicalImageIndexes = new Set();
 
+  // Rebuild conversation history with images
+  // placed in their original messages.
+  const inputHistory = history.map(item => {
+
+    if (
+      item.type !== "image" ||
+      !Number.isInteger(item.imageIndex)
+    ) {
+      return {
+        role: item.role,
+        content: item.content
+      };
+    }
+
+    const image = images[item.imageIndex];
+
+    if (!image) {
+      throw new Error(
+        "Historical image data is missing."
+      );
+    }
+
+    historicalImageIndexes.add(item.imageIndex);
+
+    return {
+      role: item.role,
+
+      content: [
+        {
+          type: "input_text",
+          text: item.content || "Image attached."
+        },
+        {
+          type: "input_image",
+          image_url:
+            `data:${image.mimeType};base64,${image.data}`,
+          detail: "auto"
+        }
+      ]
+    };
+
+  });
+
+  // Prepare the current message.
   const userContent = [];
 
   if (message.trim()) {
@@ -368,24 +411,30 @@ async function runDaneel({
     });
   }
 
-  if (images.length > 0) {
+  // Any images not referenced by historical messages
+  // are treated as newly attached images.
+  const newImageIndexes = images
+    .map((image, index) => index)
+    .filter(index => !historicalImageIndexes.has(index));
+
+  if (newImageIndexes.length > 0) {
 
     userContent.push({
       type: "input_text",
       text:
-        `The user attached ${images.length} image(s). ` +
-        "Examine the attached image(s) when relevant " +
-        "to the user's message. If the user refers to " +
-        "an image ambiguously and multiple images are " +
-        "available, ask which image they mean instead " +
-        "of guessing."
+        `The user attached ${newImageIndexes.length} new image(s). ` +
+        "Examine them when relevant to the user's message. " +
+        "If the user refers ambiguously to multiple images, " +
+        "ask which image they mean instead of guessing."
     });
 
-    images.forEach((image, index) => {
+    newImageIndexes.forEach((index, position) => {
+
+      const image = images[index];
 
       userContent.push({
         type: "input_text",
-        text: `Attached image ${index + 1}:`
+        text: `Newly attached image ${position + 1}:`
       });
 
       userContent.push({
@@ -400,7 +449,7 @@ async function runDaneel({
   }
 
   const input = [
-    ...history,
+    ...inputHistory,
     {
       role: "user",
       content: userContent
@@ -561,7 +610,6 @@ async function runDaneel({
   };
 
 }
-
 
 // ==========================================
 // 9. HEALTH CHECK
