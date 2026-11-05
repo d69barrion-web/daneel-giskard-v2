@@ -44,6 +44,34 @@ const imageUpload = multer({
   }
 });
 
+// Separate upload middleware for Chat image attachments
+
+const chatImageUpload = multer({
+  storage: multer.memoryStorage(),
+
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+    files: 4
+  },
+
+  fileFilter(req, file, callback) {
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp"
+    ];
+
+    if (!allowedTypes.includes(file.mimetype)) {
+      return callback(
+        new Error("Only JPEG, PNG, and WEBP images are allowed.")
+      );
+    }
+
+    callback(null, true);
+  }
+});
+
 const IMAGE_GENERATION_MODEL =
   process.env.IMAGE_GENERATION_MODEL ||
   "gpt-image-2.5-flare";
