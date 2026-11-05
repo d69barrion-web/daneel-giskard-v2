@@ -2656,50 +2656,46 @@ function scrollToBottom() {
 // 11. CHAT CONNECTION
 // ==========================================
 
+
 async function sendMessage() {
 
   if (isSending) return;
 
   if (!currentUser) {
-
     openSettings();
-
     showStatus("Please sign in to chat.");
-
     return;
-
   }
 
   const input = $("messageInput");
-
   const message = input.value.trim();
+  const mode = $("composerMode").value;
 
   if (!message) return;
 
   if (
     API_BASE_URL.includes("YOUR-RENDER-SERVICE")
   ) {
-
-    showStatus(
-      "Backend connection is not configured yet."
-    );
-
+    showStatus("Backend connection is not configured yet.");
     return;
-
   }
 
-  let conversation =
-    getActiveConversation();
+  // Validate image editing request
+  if (mode === "edit" && !selectedImageFile) {
+    showStatus("Please choose an image to edit first.");
+    return;
+  }
+
+  let conversation = getActiveConversation();
 
   if (!conversation) {
     conversation = createConversation();
   }
 
-  const previousMessages =
-    conversation.messages.map(item => ({
-      role: item.role,
-      content: item.content
-    }));
+  const previousMessages = conversation.messages.map(item => ({
+    role: item.role,
+    content: item.content
+  }));
 
   input.value = "";
   input.style.height = "auto";
@@ -2707,62 +2703,198 @@ async function sendMessage() {
   addMessage("user", message);
 
   isSending = true;
-
   $("sendButton").disabled = true;
 
-  showStatus("Daneel is thinking...");
+  showStatus(
+    mode === "chat"
+      ? "Daneel is thinking..."
+      : mode === "generate"
+        ? "Creating your image..."
+        : "Editing your image..."
+  );
 
   const typing = document.createElement("div");
-
   typing.className = "typing";
-  typing.textContent = "Daneel is thinking...";
+  typing.textContent =
+    mode === "chat"
+      ? "Daneel is thinking..."
+      : "Processing image...";
 
   $("messages").appendChild(typing);
-
   scrollToBottom();
 
   try {
 
-    const token =
-      await currentUser.getIdToken();
+    const token = await currentUser.getIdToken();
 
-    const response = await fetch(
-      API_BASE_URL + "/chat",
-      {
-        method: "POST",
+    let response;
 
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer " + token
-        },
+    // CHAT MODE
+    if (mode === "chat") {
 
-        body: JSON.stringify({
-          message,
-          history: previousMessages
-        })
+      response = await fetch(
+        API_BASE_URL + "/chat",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          },
+          body: JSON.stringify({
+            message,
+            history: previousMessages
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "Chat request failed.");
       }
-    );
 
-    const data = await response.json();
-
-    if (!response.ok || !data.ok) {
-
-      throw new Error(
-        data.error || "Chat request failed."
+      addMessage(
+        "assistant",
+        data.chat?.text || "No response received."
       );
 
     }
 
-    addMessage(
-      "assistant",
-      data.chat?.text || "No response received."
-    );
+    // CREATE IMAGE MODE
+    else if (mode === "generate") {
+
+      response = await fetch(
+        API_BASE_URL + "/images/generate",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          },
+          body: JSON.stringify({
+            prompt: message
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.ok || !data.image?.data) {
+        throw new Error(
+          data.error || "Image generation failed."
+        );
+      }
+
+      const binary = atob(data.image.data);
+
+      const bytes = new Uint8Array(binary.length);
+
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+
+      const blob = new Blob(
+        [bytes],
+        { type: data.image.mimeType || "image/png" }
+      );
+
+      const imageId = await saveImageBlob(blob, {
+        conversationId: conversation.id,
+        prompt: message,
+        mode: "generation"
+      });
+
+      await addImageMessage({
+        imageId,
+        prompt: message,
+        mode: "generation"
+      });
+
+      // Attempt automatic download; manual button remains available.
+      try {
+        await downloadImage(imageId);
+      } catch (downloadError) {
+        console.warn("Automatic download unavailable:", downloadError);
+      }
+
+    }
+
+    // EDIT IMAGE MODE
+    else if (mode === "edit") {
+
+      const formData = new FormData();
+
+      formData.append("image", selectedImageFile);
+      formData.append("prompt", message);
+
+      response = await fetch(
+        API_BASE_URL + "/images/edit",
+        {
+          method: "POST",
+          headers: {
+            "Authorization": "Bearer " + token
+          },
+          body: formData
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.ok || !data.image?.data) {
+        throw new Error(
+          data.error || "Image editing failed."
+        );
+      }
+
+      const binary = atob(data.image.data);
+
+      const bytes = new Uint8Array(binary.length);
+
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+
+      const blob = new Blob(
+        [bytes],
+        { type: data.image.mimeType || "image/png" }
+      );
+
+      const imageId = await saveImageBlob(blob, {
+        conversationId: conversation.id,
+        prompt: message,
+        mode: "edit"
+      });
+
+      await addImageMessage({
+        imageId,
+        prompt: message,
+        mode: "edit"
+      });
+
+      try {
+        await downloadImage(imageId);
+      } catch (downloadError) {
+        console.warn("Automatic download unavailable:", downloadError);
+      }
+
+      selectedImageFile = null;
+      imageFileInput.value = "";
+      selectedImageName.textContent = "";
+      selectedImageName.style.display = "none";
+
+    }
+
+    else {
+      throw new Error("Unknown composer mode.");
+    }
 
   } catch (error) {
 
+    console.error("Send request failed:", error);
+
     addMessage(
       "assistant",
-      "Pasensya, nagkaroon ng problema sa koneksyon.\n\n" +
+      "Pasensya, nagkaroon ng problema.\n\n" +
       error.message
     );
 
@@ -2781,6 +2913,10 @@ async function sendMessage() {
   }
 
 }
+
+
+
+
 // IMAGE MODE CONTROLS
 
 let selectedImageFile = null;
