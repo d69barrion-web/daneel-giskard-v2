@@ -1797,9 +1797,42 @@ function renderMessages() {
 
       const isUser = message.role === "user";
 
-      const messageHTML = isUser
-        ? escapeHTML(message.content)
-        : renderMarkdown(message.content);
+      let messageHTML = escapeHTML(message.content);
+      let projectButton = "";
+
+      if (!isUser) {
+
+        currentRenderingMessageIndex = index;
+
+        const firstCodeIndex = renderedCodeBlocks.length;
+
+        messageHTML = renderMarkdown(message.content);
+
+        const messageBlocks = renderedCodeBlocks.slice(
+          firstCodeIndex
+        );
+
+        const hasHTML = messageBlocks.some(item =>
+          ["html", "html5"].includes(item.language)
+        );
+
+        const hasCSSorJS = messageBlocks.some(item =>
+          ["css", "js", "javascript"].includes(item.language)
+        );
+
+        if (hasHTML && hasCSSorJS) {
+          projectButton = `
+            <button
+              class="code-action run-project-btn"
+              data-run-project="${index}"
+              type="button"
+              title="Run combined project"
+            >
+              ▶ Run Project
+            </button>
+          `;
+        }
+      }
 
       return `
         <div class="message ${isUser ? "user" : "bot"}">
@@ -1815,6 +1848,8 @@ function renderMessages() {
             </div>
 
             <div class="message-actions">
+              ${projectButton}
+
               <button
                 class="copy-btn"
                 data-message-copy="${index}"
@@ -1831,13 +1866,15 @@ function renderMessages() {
       `;
 
     }).join("");
-$("messages").querySelectorAll("pre code").forEach((block) => {
-  if (block.classList.contains("language-text")) return;
 
-  hljs.highlightElement(block);
-});
+  currentRenderingMessageIndex = -1;
+
+  $("messages").querySelectorAll("pre code").forEach(block => {
+    if (block.classList.contains("language-text")) return;
+    hljs.highlightElement(block);
+  });
+
   scrollToBottom();
-
 }
 
 
