@@ -2781,7 +2781,82 @@ async function sendMessage() {
   }
 
 }
+// IMAGE MODE CONTROLS
 
+let selectedImageFile = null;
+
+const composerMode = $("composerMode");
+const chooseImageButton = $("chooseImageButton");
+const imageFileInput = $("imageFileInput");
+const selectedImageName = $("selectedImageName");
+
+composerMode.addEventListener("change", () => {
+
+  const mode = composerMode.value;
+
+  selectedImageFile = null;
+  imageFileInput.value = "";
+  selectedImageName.style.display = "none";
+  selectedImageName.textContent = "";
+
+  if (mode === "edit") {
+
+    chooseImageButton.style.display = "inline-block";
+
+    $("messageInput").placeholder =
+      "Describe how you want to edit the image...";
+
+  } else {
+
+    chooseImageButton.style.display = "none";
+
+    $("messageInput").placeholder =
+      mode === "generate"
+        ? "Describe the image you want to create..."
+        : "Message Daneel...";
+
+  }
+
+});
+
+chooseImageButton.addEventListener("click", () => {
+  imageFileInput.click();
+});
+
+imageFileInput.addEventListener("change", () => {
+
+  const file = imageFileInput.files[0];
+
+  if (!file) return;
+
+  const allowedTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/webp"
+  ];
+
+  if (!allowedTypes.includes(file.type)) {
+    showStatus("JPEG, PNG, or WEBP images only.");
+    imageFileInput.value = "";
+    return;
+  }
+
+  if (file.size > 10 * 1024 * 1024) {
+    showStatus("Maximum image size is 10 MB.");
+    imageFileInput.value = "";
+    return;
+  }
+
+  selectedImageFile = file;
+
+  selectedImageName.textContent =
+    "Selected: " + file.name;
+
+  selectedImageName.style.display = "block";
+
+  showStatus("");
+
+});
 
 $("sendButton").onclick = sendMessage;
 
