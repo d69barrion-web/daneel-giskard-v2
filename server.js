@@ -14,6 +14,51 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
+// ==========================================
+// IMAGE UPLOAD CONFIGURATION
+// ==========================================
+
+const imageUpload = multer({
+  storage: multer.memoryStorage(),
+
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+    files: 1
+  },
+
+  fileFilter(req, file, callback) {
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp"
+    ];
+
+    if (!allowedTypes.includes(file.mimetype)) {
+      return callback(
+        new Error("Only JPEG, PNG, and WEBP images are allowed.")
+      );
+    }
+
+    callback(null, true);
+  }
+});
+
+const IMAGE_GENERATION_MODEL =
+  process.env.IMAGE_GENERATION_MODEL ||
+  "gpt-image-2.5-flare";
+
+const IMAGE_EDIT_MODEL =
+  process.env.IMAGE_EDIT_MODEL ||
+  "gpt-image-2.5-sunburst";
+
+const MAX_IMAGE_PROMPT_CHARS = 8000;
+
+function getSafetyIdentifier(uid) {
+  return createHash("sha256")
+    .update(uid)
+    .digest("hex");
+}
 const MODEL =
   process.env.OPENAI_MODEL || "gpt-5.4-mini";
 
@@ -593,6 +638,190 @@ app.post(
   }
 );
 
+
+// ==========================================
+// 11. IMAGE GENERATION ENDPOINT
+// ==========================================
+
+app.post(
+  "/images/generate",
+  requireAuth,
+  async (req, res) => {
+
+    try {
+
+      const prompt = req.body?.prompt;
+
+      if (
+        typeof prompt !== "string" ||
+        !prompt.trim()
+      ) {
+        return res.status(400).json({
+          ok: false,
+          error: "An image prompt is required."
+        });
+      }
+
+      if (
+        prompt.length > MAX_IMAGE_PROMPT_CHARS
+      ) {
+        return res.status(413).json({
+          ok: false,
+          error: "Image prompt is too long."
+        });
+      }
+
+      if (!openai) {
+        throw new Error(
+          "OpenAI API key is not configured."
+        );
+      }
+
+      const result = await openai.images.generate({
+        model: IMAGE_GENERATION_MODEL,
+        prompt: prompt.trim(),
+        size: "1024x1024",
+        quality: "medium",
+        output_format: "png",
+        safety_identifier: getSafetyIdentifier(req.user.uid)
+      });
+
+      const image = result.data?.[0]?.b64_json;
+
+      if (!image) {
+        throw new Error(
+          "No generated image was returned."
+        );
+      }
+
+      return res.json({
+        ok: true,
+        action: {
+          type: "image_generation"
+        },
+        image: {
+          data: image,
+          mimeType: "image/png"
+        }
+      });
+
+    } catch (error) {
+
+      console.error(
+        "Image generation failed:",
+        error.message
+      );
+
+      return res.status(500).json({
+        ok: false,
+        error: "Image generation failed."
+      });
+
+    }
+
+  }
+);
+
+
+// ==========================================
+// 12. IMAGE EDITING ENDPOINT
+// ==========================================
+
+app.post(
+  "/images/edit",
+  requireAuth,
+  imageUpload.single("image"),
+  async (req, res) => {
+
+    try {
+
+      const prompt = req.body?.prompt;
+
+      if (!req.file) {
+        return res.status(400).json({
+          ok: false,
+          error: "An image file is required."
+        });
+      }
+
+      if (
+        typeof prompt !== "string" ||
+        !prompt.trim()
+      ) {
+        return res.status(400).json({
+          ok: false,
+          error: "Editing instructions are required."
+        });
+      }
+
+      if (
+        prompt.length > MAX_IMAGE_PROMPT_CHARS
+      ) {
+        return res.status(413).json({
+          ok: false,
+          error: "Editing instructions are too long."
+        });
+      }
+
+      if (!openai) {
+        throw new Error(
+          "OpenAI API key is not configured."
+        );
+      }
+
+      const imageFile = await toFile(
+        req.file.buffer,
+        req.file.originalname,
+        {
+          type: req.file.mimetype
+        }
+      );
+
+      const result = await openai.images.edit({
+        model: IMAGE_EDIT_MODEL,
+        image: imageFile,
+        prompt: prompt.trim(),
+        size: "1024x1024",
+        quality: "medium",
+        output_format: "png",
+        safety_identifier: getSafetyIdentifier(req.user.uid)
+      });
+
+      const image = result.data?.[0]?.b64_json;
+
+      if (!image) {
+        throw new Error(
+          "No edited image was returned."
+        );
+      }
+
+      return res.json({
+        ok: true,
+        action: {
+          type: "image_edit"
+        },
+        image: {
+          data: image,
+          mimeType: "image/png"
+        }
+      });
+
+    } catch (error) {
+
+      console.error(
+        "Image editing failed:",
+        error.message
+      );
+
+      return res.status(500).json({
+        ok: false,
+        error: "Image editing failed."
+      });
+
+    }
+
+  }
+);
 
 // ==========================================
 // 11. GENERAL ERROR HANDLER
