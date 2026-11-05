@@ -2698,7 +2698,6 @@ function scrollToBottom() {
 // 11. CHAT CONNECTION
 // ==========================================
 
-
 async function sendMessage() {
 
   if (isSending) return;
@@ -2713,18 +2712,23 @@ async function sendMessage() {
   const message = input.value.trim();
   const mode = $("composerMode").value;
 
-  if (!message) return;
+  // Allow image-only messages in Chat mode.
+  if (!message && !(mode === "chat" && selectedImageFile)) {
+    return;
+  }
 
-  if (
-    API_BASE_URL.includes("YOUR-RENDER-SERVICE")
-  ) {
+  if (API_BASE_URL.includes("YOUR-RENDER-SERVICE")) {
     showStatus("Backend connection is not configured yet.");
     return;
   }
 
-  // Validate image editing request
   if (mode === "edit" && !selectedImageFile) {
     showStatus("Please choose an image to edit first.");
+    return;
+  }
+
+  if (mode !== "chat" && !message) {
+    showStatus("Please enter a prompt.");
     return;
   }
 
@@ -2739,10 +2743,11 @@ async function sendMessage() {
     content: item.content
   }));
 
+  const attachedFile =
+    mode === "chat" ? selectedImageFile : null;
+
   input.value = "";
   input.style.height = "auto";
-
-  addMessage("user", message);
 
   isSending = true;
   $("sendButton").disabled = true;
@@ -2774,25 +2779,60 @@ async function sendMessage() {
     // CHAT MODE
     if (mode === "chat") {
 
+      if (attachedFile) {
+
+        // Save the original uploaded image locally.
+        const imageId = await saveImageBlob(
+          attachedFile,
+          {
+            conversationId: conversation.id,
+            prompt: message,
+            mode: "attachment"
+          }
+        );
+
+        // Add the image as a user message.
+        await addUserImageMessage({
+          imageId,
+          prompt: message
+        });
+
+      } else {
+
+        addMessage("user", message);
+
+      }
+
+      const formData = new FormData();
+
+      formData.append("message", message);
+
+      formData.append(
+        "history",
+        JSON.stringify(previousMessages)
+      );
+
+      if (attachedFile) {
+        formData.append("images", attachedFile);
+      }
+
       response = await fetch(
         API_BASE_URL + "/chat",
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
             "Authorization": "Bearer " + token
           },
-          body: JSON.stringify({
-            message,
-            history: previousMessages
-          })
+          body: formData
         }
       );
 
       const data = await response.json();
 
       if (!response.ok || !data.ok) {
-        throw new Error(data.error || "Chat request failed.");
+        throw new Error(
+          data.error || "Chat request failed."
+        );
       }
 
       addMessage(
@@ -2800,10 +2840,18 @@ async function sendMessage() {
         data.chat?.text || "No response received."
       );
 
+      // Clear the selected attachment after processing.
+      selectedImageFile = null;
+      imageFileInput.value = "";
+      selectedImageName.textContent = "";
+      selectedImageName.style.display = "none";
+
     }
 
     // CREATE IMAGE MODE
     else if (mode === "generate") {
+
+      addMessage("user", message);
 
       response = await fetch(
         API_BASE_URL + "/images/generate",
@@ -2828,7 +2876,6 @@ async function sendMessage() {
       }
 
       const binary = atob(data.image.data);
-
       const bytes = new Uint8Array(binary.length);
 
       for (let i = 0; i < binary.length; i++) {
@@ -2852,17 +2899,21 @@ async function sendMessage() {
         mode: "generation"
       });
 
-      // Attempt automatic download; manual button remains available.
       try {
         await downloadImage(imageId);
       } catch (downloadError) {
-        console.warn("Automatic download unavailable:", downloadError);
+        console.warn(
+          "Automatic download unavailable:",
+          downloadError
+        );
       }
 
     }
 
     // EDIT IMAGE MODE
     else if (mode === "edit") {
+
+      addMessage("user", message);
 
       const formData = new FormData();
 
@@ -2889,7 +2940,6 @@ async function sendMessage() {
       }
 
       const binary = atob(data.image.data);
-
       const bytes = new Uint8Array(binary.length);
 
       for (let i = 0; i < binary.length; i++) {
@@ -2916,7 +2966,10 @@ async function sendMessage() {
       try {
         await downloadImage(imageId);
       } catch (downloadError) {
-        console.warn("Automatic download unavailable:", downloadError);
+        console.warn(
+          "Automatic download unavailable:",
+          downloadError
+        );
       }
 
       selectedImageFile = null;
@@ -2955,9 +3008,6 @@ async function sendMessage() {
   }
 
 }
-
-
-
 
 // IMAGE MODE CONTROLS
 
