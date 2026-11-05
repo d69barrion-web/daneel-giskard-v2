@@ -2044,12 +2044,31 @@ function renderMessages() {
 
         const imageId = escapeHTML(message.imageId || "");
 
+        const imageMode = message.imageMode || "generation";
+
+        const imageDescription =
+          imageMode === "attachment"
+            ? "Uploaded image"
+            : imageMode === "edit"
+              ? "Edited image"
+              : "Generated image";
+
+        const imageAlt = escapeHTML(imageDescription);
+
+        const caption = message.content
+          ? `<div class="image-caption">${escapeHTML(message.content)}</div>`
+          : "";
+
         messageHTML = `
           <div class="image-message">
 
+            <div class="image-description">
+              ${imageAlt}
+            </div>
+
             <img
               data-image-display="${imageId}"
-              alt="Generated image"
+              alt="${imageAlt}"
               style="
                 display:block;
                 width:100%;
@@ -2059,6 +2078,8 @@ function renderMessages() {
                 margin-top:8px;
               "
             >
+
+            ${caption}
 
             <button
               class="code-action"
@@ -2107,6 +2128,7 @@ function renderMessages() {
             </button>
           `;
         }
+
       }
 
       return `
@@ -2151,12 +2173,12 @@ function renderMessages() {
     hljs.highlightElement(block);
   });
 
-  // Load images saved in IndexedDB
+  // Load images saved in IndexedDB.
   loadConversationImages();
 
   scrollToBottom();
 }
-  
+
 // ==========================================
 // MESSAGE AND CODE ACTIONS
 // ==========================================
