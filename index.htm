@@ -2130,7 +2130,36 @@ function renderMessages() {
 // ==========================================
 // MESSAGE AND CODE ACTIONS
 // ==========================================
+async function downloadImage(imageId) {
 
+  const record = await getImageBlob(imageId);
+
+  if (!record) {
+    throw new Error("Image not found in this browser.");
+  }
+
+  const imageURL = URL.createObjectURL(record.blob);
+
+  const extension = {
+    "image/png": "png",
+    "image/jpeg": "jpg",
+    "image/webp": "webp"
+  }[record.mimeType] || "png";
+
+  const link = document.createElement("a");
+
+  link.href = imageURL;
+  link.download = `daneel-image-${Date.now()}.${extension}`;
+
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  // Bigyan ng oras ang browser na simulan ang download
+  setTimeout(() => {
+    URL.revokeObjectURL(imageURL);
+  }, 2000);
+}
 $("messages").addEventListener("click", async event => {
 
   const messageButton =
@@ -2144,6 +2173,44 @@ $("messages").addEventListener("click", async event => {
 
   const projectButton =
     event.target.closest("[data-run-project]");
+
+  const downloadButton =
+    event.target.closest("[data-image-download]");
+
+
+  // Download image
+
+  if (downloadButton) {
+
+    const imageId = downloadButton.dataset.imageDownload;
+
+    downloadButton.disabled = true;
+
+    try {
+      await downloadImage(imageId);
+
+      downloadButton.textContent = "✓ Download started";
+
+    } catch (error) {
+
+      console.error("Image download failed:", error);
+
+      downloadButton.textContent = "⚠ Download failed";
+
+      showStatus(error.message);
+
+    } finally {
+
+      downloadButton.disabled = false;
+
+      setTimeout(() => {
+        downloadButton.textContent = "⬇ Download Image";
+      }, 2500);
+
+    }
+
+    return;
+  }
 
 
   // Copy entire message
