@@ -1226,6 +1226,176 @@ function loadLocalData() {
 
 }
 
+// ==========================================
+// IMAGE STORAGE — INDEXEDDB
+// ==========================================
+
+const IMAGE_DB_NAME = "daneel_giskard_v2";
+const IMAGE_DB_VERSION = 1;
+const IMAGE_STORE_NAME = "images";
+
+let imageDBPromise = null;
+
+
+// Open or create the image database.
+
+function openImageDB() {
+
+  if (imageDBPromise) {
+    return imageDBPromise;
+  }
+
+  imageDBPromise = new Promise((resolve, reject) => {
+
+    const request = indexedDB.open(
+      IMAGE_DB_NAME,
+      IMAGE_DB_VERSION
+    );
+
+    request.onupgradeneeded = event => {
+
+      const db = event.target.result;
+
+      if (!db.objectStoreNames.contains(IMAGE_STORE_NAME)) {
+
+        db.createObjectStore(
+          IMAGE_STORE_NAME,
+          { keyPath: "id" }
+        );
+
+      }
+
+    };
+
+    request.onsuccess = () => {
+      resolve(request.result);
+    };
+
+    request.onerror = () => {
+      imageDBPromise = null;
+      reject(request.error);
+    };
+
+  });
+
+  return imageDBPromise;
+
+}
+
+
+// Save an image Blob.
+
+async function saveImageBlob(blob, metadata = {}) {
+
+  if (!currentUser) {
+    throw new Error("Please sign in first.");
+  }
+
+  if (!(blob instanceof Blob)) {
+    throw new Error("Invalid image data.");
+  }
+
+  const db = await openImageDB();
+
+  const imageRecord = {
+    id: crypto.randomUUID(),
+    uid: currentUser.uid,
+    blob,
+    mimeType: blob.type || "image/png",
+    conversationId: metadata.conversationId || null,
+    prompt: metadata.prompt || "",
+    mode: metadata.mode || "generation",
+    createdAt: Date.now()
+  };
+
+  await new Promise((resolve, reject) => {
+
+    const transaction = db.transaction(
+      IMAGE_STORE_NAME,
+      "readwrite"
+    );
+
+    transaction.objectStore(
+      IMAGE_STORE_NAME
+    ).put(imageRecord);
+
+    transaction.oncomplete = resolve;
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+
+  });
+
+  return imageRecord.id;
+
+}
+
+
+// Retrieve an image Blob.
+// Only the currently signed-in user's images are returned.
+
+async function getImageBlob(imageId) {
+
+  if (!currentUser || !imageId) {
+    return null;
+  }
+
+  const db = await openImageDB();
+
+  const record = await new Promise((resolve, reject) => {
+
+    const transaction = db.transaction(
+      IMAGE_STORE_NAME,
+      "readonly"
+    );
+
+    const request = transaction
+      .objectStore(IMAGE_STORE_NAME)
+      .get(imageId);
+
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error);
+
+  });
+
+  if (!record || record.uid !== currentUser.uid) {
+    return null;
+  }
+
+  return record;
+
+}
+
+
+// Delete a stored image.
+
+async function deleteImageBlob(imageId) {
+
+  if (!currentUser || !imageId) return;
+
+  const db = await openImageDB();
+
+  const record = await getImageBlob(imageId);
+
+  if (!record) return;
+
+  await new Promise((resolve, reject) => {
+
+    const transaction = db.transaction(
+      IMAGE_STORE_NAME,
+      "readwrite"
+    );
+
+    transaction.objectStore(
+      IMAGE_STORE_NAME
+    ).delete(imageId);
+
+    transaction.oncomplete = resolve;
+    transaction.onerror = () => reject(transaction.error);
+
+  });
+
+}
+
 
 // ==========================================
 // 4. DOM HELPERS
