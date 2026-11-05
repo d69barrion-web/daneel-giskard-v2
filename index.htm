@@ -2826,15 +2826,12 @@ async function sendMessage() {
     conversation = createConversation();
   }
 
-  // Capture history BEFORE adding the current message.
-  let preparedHistory = null;
+  // Capture current attachment before processing.
+const attachedFile =
+  mode === "chat" ? selectedImageFile : null;
 
-  if (mode === "chat") {
-    preparedHistory = await prepareChatHistory(conversation);
-  }
-
-  const attachedFile =
-    mode === "chat" ? selectedImageFile : null;
+// Prepare history inside the try block.
+let preparedHistory = null;
 
   input.value = "";
   input.style.height = "auto";
