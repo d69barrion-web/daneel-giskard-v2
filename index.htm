@@ -1395,13 +1395,21 @@ async function getImageBlob(imageId) {
 
 }
 
-async function prepareChatHistory(conversation) {
 
+async function prepareChatHistory(
+  conversation,
+  reserveImageSlots = 0
+) {
   const history = [];
   const images = [];
 
-  for (const message of conversation.messages) {
+  const MAX_IMAGES = 4;
+  const availableSlots = Math.max(
+    0,
+    MAX_IMAGES - reserveImageSlots
+  );
 
+  for (const message of conversation.messages) {
     const historyItem = {
       role: message.role,
       content: message.content || ""
@@ -1411,39 +1419,47 @@ async function prepareChatHistory(conversation) {
       message.type === "image" &&
       message.imageId
     ) {
+      if (images.length >= availableSlots) {
+        historyItem.content +=
+          "\n[Image omitted from this request because of the image limit.]";
+
+        history.push(historyItem);
+        continue;
+      }
 
       const record = await getImageBlob(
         message.imageId
       );
 
       if (record) {
-
         const imageIndex = images.length;
 
         images.push({
           imageId: message.imageId,
           mimeType: record.mimeType,
-          blob: record.blob
+          blob: record.blob,
+          originalRole: message.role,
+          imageMode: message.imageMode || "generation",
+          prompt: message.content || ""
         });
 
         historyItem.type = "image";
         historyItem.imageIndex = imageIndex;
         historyItem.imageMode =
           message.imageMode || "generation";
-
+      } else {
+        historyItem.content +=
+          "\n[The original image is unavailable in this browser.]";
       }
-
     }
 
     history.push(historyItem);
-
   }
 
   return {
     history,
     images
   };
-
 }
 
 
