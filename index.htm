@@ -1395,6 +1395,57 @@ async function getImageBlob(imageId) {
 
 }
 
+async function prepareChatHistory(conversation) {
+
+  const history = [];
+  const images = [];
+
+  for (const message of conversation.messages) {
+
+    const historyItem = {
+      role: message.role,
+      content: message.content || ""
+    };
+
+    if (
+      message.type === "image" &&
+      message.imageId
+    ) {
+
+      const record = await getImageBlob(
+        message.imageId
+      );
+
+      if (record) {
+
+        const imageIndex = images.length;
+
+        images.push({
+          imageId: message.imageId,
+          mimeType: record.mimeType,
+          blob: record.blob
+        });
+
+        historyItem.type = "image";
+        historyItem.imageIndex = imageIndex;
+        historyItem.imageMode =
+          message.imageMode || "generation";
+
+      }
+
+    }
+
+    history.push(historyItem);
+
+  }
+
+  return {
+    history,
+    images
+  };
+
+}
+
 
 // Delete a stored image.
 
