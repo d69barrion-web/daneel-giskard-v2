@@ -1395,7 +1395,6 @@ async function getImageBlob(imageId) {
 
 }
 
-
 async function prepareChatHistory(
   conversation,
   reserveImageSlots = 0
@@ -1404,12 +1403,53 @@ async function prepareChatHistory(
   const images = [];
 
   const MAX_IMAGES = 4;
-  const availableSlots = Math.max(
-    0,
-    MAX_IMAGES - reserveImageSlots
+
+  const reserved = Math.min(
+    MAX_IMAGES,
+    Math.max(
+      0,
+      Number.isInteger(reserveImageSlots)
+        ? reserveImageSlots
+        : 0
+    )
   );
 
-  for (const message of conversation.messages) {
+  const availableSlots = MAX_IMAGES - reserved;
+  const messages = conversation.messages;
+
+  // Find the newest available historical images first.
+  const selectedImages = new Map();
+  const checkedImageIndexes = new Set();
+
+  for (
+    let i = messages.length - 1;
+    i >= 0 && selectedImages.size < availableSlots;
+    i--
+  ) {
+    const message = messages[i];
+
+    if (
+      message.type !== "image" ||
+      !message.imageId
+    ) {
+      continue;
+    }
+
+    checkedImageIndexes.add(i);
+
+    const record = await getImageBlob(
+      message.imageId
+    );
+
+    if (record) {
+      selectedImages.set(i, record);
+    }
+  }
+
+  // Rebuild history in its original chronological order.
+  for (let i = 0; i < messages.length; i++) {
+    const message = messages[i];
+
     const historyItem = {
       role: message.role,
       content: message.content || ""
@@ -1419,17 +1459,7 @@ async function prepareChatHistory(
       message.type === "image" &&
       message.imageId
     ) {
-      if (images.length >= availableSlots) {
-        historyItem.content +=
-          "\n[Image omitted from this request because of the image limit.]";
-
-        history.push(historyItem);
-        continue;
-      }
-
-      const record = await getImageBlob(
-        message.imageId
-      );
+      const record = selectedImages.get(i);
 
       if (record) {
         const imageIndex = images.length;
@@ -1447,9 +1477,14 @@ async function prepareChatHistory(
         historyItem.imageIndex = imageIndex;
         historyItem.imageMode =
           message.imageMode || "generation";
-      } else {
+
+      } else if (checkedImageIndexes.has(i)) {
         historyItem.content +=
           "\n[The original image is unavailable in this browser.]";
+
+      } else {
+        historyItem.content +=
+          "\n[Image omitted because of the four-image request limit.]";
       }
     }
 
@@ -1461,7 +1496,6 @@ async function prepareChatHistory(
     images
   };
 }
-
 
 // Delete a stored image.
 
