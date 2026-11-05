@@ -2084,7 +2084,138 @@ function openCodePreview(code, language) {
   });
 
 }
+function openCombinedProject(messageIndex) {
 
+  const blocks = renderedCodeBlocks.filter(
+    item => item.messageIndex === messageIndex
+  );
+
+  const htmlBlock = blocks.find(item =>
+    ["html", "html5"].includes(item.language)
+  );
+
+  if (!htmlBlock) return;
+
+  const cssCode = blocks
+    .filter(item => item.language === "css")
+    .map(item => item.code)
+    .join("\n\n");
+
+  const jsCode = blocks
+    .filter(item =>
+      ["js", "javascript"].includes(item.language)
+    )
+    .map(item => item.code)
+    .join("\n\n");
+
+  let html = htmlBlock.code;
+
+  const safeCSS = cssCode.replace(
+    /<\/style/gi,
+    "<\\/style"
+  );
+
+  const safeJS = jsCode.replace(
+    /<\/script/gi,
+    "<\\/script"
+  );
+
+  const styleTag = cssCode
+    ? `<style>${safeCSS}</style>`
+    : "";
+
+  const scriptTag = jsCode
+    ? `<script>${safeJS}<\/script>`
+    : "";
+
+  if (/<\/head>/i.test(html)) {
+
+    html = html.replace(
+      /<\/head>/i,
+      `${styleTag}</head>`
+    );
+
+  } else if (/<html[^>]*>/i.test(html)) {
+
+    html = html.replace(
+      /<html[^>]*>/i,
+      match => `${match}<head>${styleTag}</head>`
+    );
+
+  } else {
+
+    html = `
+      <!DOCTYPE html>
+      <html>
+      <head>${styleTag}</head>
+      <body>${html}</body>
+      </html>
+    `;
+
+  }
+
+  if (/<\/body>/i.test(html)) {
+
+    html = html.replace(
+      /<\/body>/i,
+      `${scriptTag}</body>`
+    );
+
+  } else {
+
+    html += scriptTag;
+
+  }
+
+  const overlay = document.createElement("div");
+  overlay.className = "preview-overlay";
+
+  const panel = document.createElement("div");
+  panel.className = "preview-panel";
+
+  const header = document.createElement("div");
+  header.className = "preview-header";
+
+  header.innerHTML = `
+    <strong>Combined Project Preview</strong>
+    <button type="button" class="preview-close">✕</button>
+  `;
+
+  const frame = document.createElement("iframe");
+  frame.className = "preview-frame";
+  frame.setAttribute("sandbox", "allow-scripts");
+  frame.srcdoc = html;
+
+  panel.append(header, frame);
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+
+  function closePreview() {
+    overlay.remove();
+
+    document.removeEventListener(
+      "keydown",
+      escapePreview
+    );
+  }
+
+  function escapePreview(event) {
+    if (event.key === "Escape") {
+      closePreview();
+    }
+  }
+
+  header.querySelector(".preview-close")
+    .addEventListener("click", closePreview);
+
+  overlay.addEventListener("click", event => {
+    if (event.target === overlay) {
+      closePreview();
+    }
+  });
+
+  document.addEventListener("keydown", escapePreview);
+}
 function addMessage(role, content) {
 
   const conversation =
@@ -2286,6 +2417,8 @@ $("messageInput").addEventListener(
     input.style.height =
       Math.min(input.scrollHeight,160) + "px";
 
+    const projectButton =
+      event.target.closest("[data-run-project]");
   }
 );
 
