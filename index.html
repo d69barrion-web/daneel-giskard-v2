@@ -1904,7 +1904,9 @@ function getEditorMarkdown() {
   const cleanHTML = DOMPurify.sanitize(
     richEditor.innerHTML
   );
-
+  
+  alert(cleanHTML);
+  
   const service = new TurndownService({
     codeBlockStyle: "fenced",
     headingStyle: "atx"
