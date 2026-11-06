@@ -665,6 +665,70 @@ body.light .user .bubble {
 .bubble p:last-child {
   margin-bottom: 0;
 }
+  
+  /* CODE BLOCK */
+
+.code-block {
+  margin: 13px 0;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  overflow: hidden;
+  background: var(--panel);
+  max-width: 100%;
+}
+
+.code-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 11px;
+  background: var(--panel2);
+  border-bottom: 1px solid var(--border);
+}
+
+.code-language {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.code-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.code-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.code-action:active {
+  opacity: .6;
+}
+
+.code-block pre {
+  margin: 0;
+  padding: 13px;
+  overflow-x: auto;
+  white-space: pre;
+  font-size: 13px;
+  line-height: 1.6;
+  tab-size: 2;
+}
+
+.code-block pre code {
+  font-family: monospace;
+}
 </style>
 </head>
 
