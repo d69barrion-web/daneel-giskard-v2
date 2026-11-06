@@ -1019,6 +1019,12 @@ import {
   signOut,
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+  import TurndownService from "https://cdn.jsdelivr.net/npm/turndown@7.2.0/+esm";
+
+const turndownService = new TurndownService({
+  codeBlockStyle: "fenced",
+  headingStyle: "atx"
+});
 
 // ==========================================
 // 1. CONFIGURATION
