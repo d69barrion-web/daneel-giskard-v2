@@ -708,6 +708,37 @@ body.light .user .bubble {
   margin-bottom: 0;
 }
 
+.code-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 7px 10px;
+  background: #252b38;
+  border-radius: 9px 9px 0 0;
+}
+
+.code-toolbar + pre {
+  margin-top: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.code-action-btn {
+  border: 1px solid #596273;
+  background: transparent;
+  color: #e6edf3;
+  padding: 5px 11px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.code-action-btn:hover {
+  background: #3a4353;
+}
+
 </style>
 </head>
 
@@ -1581,10 +1612,63 @@ function renderMessages() {
 
     }).join("");
   
-// Apply syntax highlighting to code blocks
+
+// Apply syntax highlighting and code block actions
 $("messages").querySelectorAll("pre code").forEach(block => {
+
   hljs.highlightElement(block);
+
+  const pre = block.parentElement;
+
+  // Create toolbar
+  const toolbar = document.createElement("div");
+  toolbar.className = "code-toolbar";
+
+  // Copy button
+  const copyBtn = document.createElement("button");
+  copyBtn.type = "button";
+  copyBtn.textContent = "Copy";
+  copyBtn.className = "code-action-btn";
+
+  copyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(block.textContent);
+      copyBtn.textContent = "Copied!";
+    } catch (error) {
+      copyBtn.textContent = "Copy failed";
+    }
+
+    setTimeout(() => {
+      copyBtn.textContent = "Copy";
+    }, 1800);
+  });
+
+  toolbar.appendChild(copyBtn);
+
+  // Detect HTML code blocks
+  const isHTML =
+    block.classList.contains("language-html") ||
+    block.classList.contains("language-htm");
+
+  // Preview button (HTML only)
+  if (isHTML) {
+
+    const previewBtn = document.createElement("button");
+    previewBtn.type = "button";
+    previewBtn.textContent = "Preview ↗";
+    previewBtn.className = "code-action-btn";
+
+    previewBtn.addEventListener("click", () => {
+      openCodePreview(block.textContent);
+    });
+
+    toolbar.appendChild(previewBtn);
+  }
+
+  pre.parentElement.insertBefore(toolbar, pre);
+
 });
+
   scrollToBottom();
 
 }
