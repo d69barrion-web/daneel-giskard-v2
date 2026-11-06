@@ -831,7 +831,44 @@ body.light .user .bubble {
 #messageInput {
   display: none;
 }
+/* MESSAGE COPY BUTTON */
 
+.message-actions {
+  display: flex;
+  align-items: center;
+  margin-top: 6px;
+  padding: 0 4px;
+}
+
+.copy-message-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.copy-message-btn:hover {
+  background: var(--panel2);
+  color: var(--text);
+}
+
+.copy-message-btn:active {
+  transform: scale(0.96);
+}
+
+.copy-message-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+  
 </style>
 </head>
 
