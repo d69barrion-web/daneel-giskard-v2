@@ -1973,8 +1973,11 @@ async function sendMessage() {
   }
 
   const input = $("messageInput");
+const editor = $("richMessageInput");
 
-  const message = input.value.trim();
+const message = getEditorMarkdown();
+
+input.value = message;
 
   if (!message) return;
 
@@ -2004,7 +2007,7 @@ async function sendMessage() {
     }));
 
   input.value = "";
-  input.style.height = "auto";
+  editor.innerHTML = "";
 
   addMessage("user", message);
 
@@ -2078,7 +2081,7 @@ async function sendMessage() {
 
     showStatus("");
 
-    input.focus();
+    editor.focus();
 
   }
 
@@ -2088,7 +2091,7 @@ async function sendMessage() {
 $("sendButton").onclick = sendMessage;
 
 
-$("messageInput").addEventListener(
+$("richMessageInput").addEventListener(
   "keydown",
   event => {
 
