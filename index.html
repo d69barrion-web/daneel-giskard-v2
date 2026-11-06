@@ -2108,22 +2108,6 @@ $("richMessageInput").addEventListener(
   }
 );
 
-
-$("messageInput").addEventListener(
-  "input",
-  event => {
-
-    const input = event.target;
-
-    input.style.height = "auto";
-
-    input.style.height =
-      Math.min(input.scrollHeight,160) + "px";
-
-  }
-);
-
-
 // ==========================================
 // 12. INITIALIZATION
 // ==========================================
