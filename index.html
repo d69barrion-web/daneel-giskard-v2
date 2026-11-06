@@ -1718,7 +1718,7 @@ function renderMessages() {
   }
 
   $("messages").innerHTML =
-    conversation.messages.map(message => {
+    conversation.messages.map((message, index) => {
 
       const isUser = message.role === "user";
 
