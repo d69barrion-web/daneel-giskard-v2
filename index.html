@@ -1647,7 +1647,9 @@ $("conversationList").addEventListener(
 
     }
 
-    if (pinButton) {
+    if (openButton) {
+
+  alert("OPEN BUTTON DETECTED: " + openButton.dataset.open);
 
       const conversation =
         conversations.find(
