@@ -1590,6 +1590,74 @@ $("messages").querySelectorAll("pre code").forEach(block => {
 }
 
 
+function openCodePreview(code) {
+
+  const previewTab = window.open("", "_blank");
+
+  if (!previewTab) {
+    alert("Hindi nabuksan ang preview. Payagan muna ang pop-ups sa browser.");
+    return;
+  }
+
+  previewTab.document.open();
+
+  previewTab.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>Daneel Code Preview</title>
+      <style>
+        * {
+          box-sizing: border-box;
+        }
+
+        html, body {
+          margin: 0;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+          font-family: Arial, sans-serif;
+        }
+
+        .preview-header {
+          height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 14px;
+          background: #202633;
+          color: white;
+          font-size: 13px;
+        }
+
+        iframe {
+          display: block;
+          width: 100%;
+          height: calc(100% - 44px);
+          border: 0;
+          background: white;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="preview-header">
+        <strong>Daneel Code Preview</strong>
+        <span>Live HTML</span>
+      </div>
+    </body>
+    </html>
+  `);
+
+  const frame = previewTab.document.createElement("iframe");
+
+  frame.setAttribute("sandbox", "allow-scripts");
+  frame.srcdoc = code;
+
+  previewTab.document.body.appendChild(frame);
+  previewTab.document.close();
+}
+
 
 function addMessage(role, content) {
 
