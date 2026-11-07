@@ -2174,10 +2174,20 @@ $("conversationList").addEventListener(
       }
 
       conversation.title = cleanTitle;
-      conversation.updatedAt = Date.now();
+conversation.updatedAt = Date.now();
 
-      saveLocalData();
-      renderConversationList();
+saveLocalData();
+
+queueFirestoreSave(conversation).catch(error => {
+
+  showStatus(
+    "Local copy saved, but cloud sync failed: " +
+    error.message
+  );
+
+});
+
+renderConversationList();
 
     }
 
@@ -2233,10 +2243,22 @@ $("conversationList").addEventListener(
       if (conversation) {
 
         conversation.pinned =
-          !conversation.pinned;
+  !conversation.pinned;
 
-        saveLocalData();
-        renderConversationList();
+conversation.updatedAt = Date.now();
+
+saveLocalData();
+
+queueFirestoreSave(conversation).catch(error => {
+
+  showStatus(
+    "Local copy saved, but cloud sync failed: " +
+    error.message
+  );
+
+});
+
+renderConversationList();
 
       }
 
