@@ -1441,6 +1441,80 @@ async function testFirestoreWrite() {
   }
 
 }
+  
+async function testFirestoreDelete() {
+
+  if (!currentUser) return;
+
+  const testId = "firestore-write-test";
+
+  try {
+
+    const token = await currentUser.getIdToken();
+
+    // 1. Delete test document
+    const deleteResponse = await fetch(
+      API_BASE_URL +
+      "/conversations/" +
+      encodeURIComponent(testId),
+      {
+        method: "DELETE",
+        headers: {
+          "Authorization": "Bearer " + token
+        }
+      }
+    );
+
+    const deleteData = await deleteResponse.json();
+
+    if (!deleteResponse.ok || !deleteData.ok) {
+      throw new Error(
+        deleteData.error || "Firestore delete failed."
+      );
+    }
+
+    // 2. Verify deletion
+    const readResponse = await fetch(
+      API_BASE_URL + "/conversations",
+      {
+        headers: {
+          "Authorization": "Bearer " + token
+        }
+      }
+    );
+
+    const readData = await readResponse.json();
+
+    if (!readResponse.ok || !readData.ok) {
+      throw new Error(
+        readData.error || "Firestore verification failed."
+      );
+    }
+
+    const stillExists = readData.conversations.some(
+      item => item.id === testId
+    );
+
+    if (stillExists) {
+      throw new Error(
+        "Test document still exists."
+      );
+    }
+
+    showStatus(
+      "Firestore delete successful! Document removed and verified."
+    );
+
+  } catch (error) {
+
+    showStatus(
+      "Firestore delete test failed: " + error.message
+    );
+
+  }
+
+}
+
 
 function loadLocalData() {
 
@@ -1653,7 +1727,7 @@ onAuthStateChanged(auth, user => {
     loadTheme();
     loadPreferredName();
     
-    testFirestoreWrite();;
+    testFirestoreDelete();
 
   } else {
 
