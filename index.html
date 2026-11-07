@@ -1143,7 +1143,11 @@ body.light .user .bubble {
 
         <p id="signedInEmail"></p>
         
-        
+        <button
+  type="button"
+  id="testFirestoreButton">
+  Test Firestore Connection
+</button>
 
       </div>
 
@@ -1354,7 +1358,8 @@ async function testFirestoreRead() {
 
 }
   
-  
+  $("testFirestoreButton").onclick =
+  testFirestoreRead;
   
 function loadLocalData() {
 
