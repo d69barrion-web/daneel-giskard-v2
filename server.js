@@ -690,6 +690,58 @@ app.put(
 );
 
 // ==========================================
+// 9.3 DELETE A CONVERSATION
+// ==========================================
+
+app.delete(
+  "/conversations/:id",
+  requireAuth,
+  async (req, res) => {
+
+    try {
+
+      const conversationId = req.params.id;
+
+      if (
+        typeof conversationId !== "string" ||
+        !/^[A-Za-z0-9_-]{1,128}$/.test(conversationId)
+      ) {
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid conversation ID."
+        });
+      }
+
+      await getUserConversationsCollection(
+        req.user.uid
+      )
+        .doc(conversationId)
+        .delete();
+
+      return res.json({
+        ok: true,
+        message: "Conversation deleted.",
+        id: conversationId
+      });
+
+    } catch (error) {
+
+      console.error(
+        "Delete conversation failed:",
+        error.message
+      );
+
+      return res.status(500).json({
+        ok: false,
+        error: "Unable to delete conversation."
+      });
+
+    }
+
+  }
+);
+
+// ==========================================
 // 10. MAIN CHAT ENDPOINT
 // ==========================================
 
