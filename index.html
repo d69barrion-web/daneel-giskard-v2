@@ -1553,7 +1553,6 @@ async function testFirestoreDelete() {
 
 }
 
-
 function loadLocalData() {
 
   if (!currentUser) return;
@@ -1825,13 +1824,32 @@ $("saveNameButton").onclick = () => {
   $("nameStatus").textContent = "Saved locally.";
 
 };
+  
+// ==========================================
+// LOAD CONVERSATIONS FROM FIRESTORE
+// ==========================================
 
+async function loadFirestoreConversations() {
+
+  const data = await firestoreRequest(
+    "/conversations"
+  );
+
+  if (!Array.isArray(data.conversations)) {
+    throw new Error(
+      "Invalid conversations data received."
+    );
+  }
+
+  return data.conversations;
+
+}
 
 // ==========================================
 // 9. CONVERSATION MANAGEMENT
 // ==========================================
 
-function createConversation() {
+  function createConversation() {
 
   const conversation = {
     id: createId(),
