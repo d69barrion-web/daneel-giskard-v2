@@ -1687,7 +1687,10 @@ $("conversationList").addEventListener(
 
     const pinButton =
       event.target.closest("[data-pin]");
-
+    
+    const editButton =
+      event.target.closest("[data-edit]");
+    
     if (openButton) {
 
       activeConversationId =
@@ -1698,7 +1701,43 @@ $("conversationList").addEventListener(
       closeDrawer();
 
     }
+    if (editButton) {
 
+  const conversation =
+    conversations.find(
+      item => item.id === editButton.dataset.edit
+    );
+
+  if (conversation) {
+
+    const newTitle = prompt(
+      "Enter new conversation title:",
+      conversation.title
+    );
+
+    if (newTitle !== null) {
+
+      const cleanTitle = newTitle.trim();
+
+      if (!cleanTitle) {
+
+        alert("Conversation title cannot be empty.");
+
+        return;
+
+      }
+
+      conversation.title = cleanTitle;
+      conversation.updatedAt = Date.now();
+
+      saveLocalData();
+      renderConversationList();
+
+    }
+
+  }
+
+}
     if (pinButton) {
 
       const conversation =
