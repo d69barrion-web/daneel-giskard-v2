@@ -1358,7 +1358,11 @@ async function testFirestoreRead() {
 
 }
   
-  
+const testButton = $("testFirestoreButton");
+
+if (testButton) {
+  testButton.onclick = testFirestoreRead;
+}
   
 function loadLocalData() {
 
