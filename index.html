@@ -1354,8 +1354,94 @@ async function testFirestoreRead() {
 
 }
   
+async function testFirestoreWrite() {
 
-  
+  if (!currentUser) return;
+
+  const testId = "firestore-write-test";
+
+  try {
+
+    const token = await currentUser.getIdToken();
+
+    // 1. Write test document
+    const saveResponse = await fetch(
+      API_BASE_URL +
+      "/conversations/" +
+      encodeURIComponent(testId),
+      {
+        method: "PUT",
+
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+
+        body: JSON.stringify({
+          title: "Firestore Write Test",
+          pinned: false,
+          updatedAt: Date.now(),
+          messages: [
+            {
+              role: "user",
+              content: "Testing Firestore write."
+            }
+          ]
+        })
+      }
+    );
+
+    const saveData = await saveResponse.json();
+
+    if (!saveResponse.ok || !saveData.ok) {
+      throw new Error(
+        saveData.error || "Firestore write failed."
+      );
+    }
+
+    // 2. Read back and verify
+    const readResponse = await fetch(
+      API_BASE_URL + "/conversations",
+      {
+        headers: {
+          "Authorization": "Bearer " + token
+        }
+      }
+    );
+
+    const readData = await readResponse.json();
+
+    if (!readResponse.ok || !readData.ok) {
+      throw new Error(
+        readData.error || "Firestore verification failed."
+      );
+    }
+
+    const found = readData.conversations.some(
+      item => item.id === testId &&
+              item.title === "Firestore Write Test"
+    );
+
+    if (!found) {
+      throw new Error(
+        "Test document was not found after saving."
+      );
+    }
+
+    showStatus(
+      "Firestore write successful! Test document verified."
+    );
+
+  } catch (error) {
+
+    showStatus(
+      "Firestore write test failed: " + error.message
+    );
+
+  }
+
+}
+
 function loadLocalData() {
 
   if (!currentUser) return;
