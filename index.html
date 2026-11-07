@@ -1844,7 +1844,42 @@ async function loadFirestoreConversations() {
   return data.conversations;
 
 }
+  
+// ==========================================
+// SAVE CONVERSATION TO FIRESTORE
+// ==========================================
 
+async function saveFirestoreConversation(conversation) {
+
+  if (!conversation || !conversation.id) {
+    throw new Error("Invalid conversation.");
+  }
+
+  const conversationData = {
+    title: conversation.title,
+    pinned: conversation.pinned,
+    updatedAt: conversation.updatedAt,
+
+    messages: conversation.messages.map(item => ({
+      role: item.role,
+      content: item.content
+    }))
+  };
+
+  const data = await firestoreRequest(
+    "/conversations/" +
+    encodeURIComponent(conversation.id),
+    {
+      method: "PUT",
+
+      body: JSON.stringify(conversationData)
+    }
+  );
+
+  return data;
+
+}
+  
 // ==========================================
 // 9. CONVERSATION MANAGEMENT
 // ==========================================
