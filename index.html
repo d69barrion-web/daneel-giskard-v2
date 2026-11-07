@@ -1630,7 +1630,6 @@ function renderConversationList() {
 
 }
 
-
 function conversationItemHTML(item) {
 
   return `
@@ -1650,12 +1649,28 @@ function conversationItemHTML(item) {
 
       </button>
 
-      <button class="pin-btn
-        ${item.pinned ? "pinned" : ""}"
-        data-pin="${escapeHTML(item.id)}"
-        title="Pin conversation">
-        ${item.pinned ? "★" : "☆"}
-      </button>
+      <div class="conversation-actions">
+
+        <button class="pin-btn
+          ${item.pinned ? "pinned" : ""}"
+          data-pin="${escapeHTML(item.id)}"
+          title="Pin conversation">
+          ${item.pinned ? "★" : "☆"}
+        </button>
+
+        <button class="edit-conversation-btn"
+          data-edit="${escapeHTML(item.id)}"
+          title="Edit title">
+          ✎
+        </button>
+
+        <button class="delete-conversation-btn"
+          data-delete="${escapeHTML(item.id)}"
+          title="Delete conversation">
+          🗑
+        </button>
+
+      </div>
 
     </div>
   `;
