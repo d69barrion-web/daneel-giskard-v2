@@ -534,6 +534,162 @@ app.get(
 );
 
 // ==========================================
+// 9.2 SAVE OR UPDATE A CONVERSATION
+// ==========================================
+
+app.put(
+  "/conversations/:id",
+  requireAuth,
+  async (req, res) => {
+
+    try {
+
+      const conversationId = req.params.id;
+      const body = req.body;
+
+      // Validate conversation ID
+      if (
+        typeof conversationId !== "string" ||
+        !/^[A-Za-z0-9_-]{1,128}$/.test(conversationId)
+      ) {
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid conversation ID."
+        });
+      }
+
+      // Validate request body
+      if (
+        !body ||
+        typeof body !== "object" ||
+        Array.isArray(body)
+      ) {
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid conversation data."
+        });
+      }
+
+      const { title, pinned, updatedAt, messages } = body;
+
+      // Validate title
+      if (
+        typeof title !== "string" ||
+        !title.trim() ||
+        title.length > 200
+      ) {
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid conversation title."
+        });
+      }
+
+      // Validate pinned
+      if (typeof pinned !== "boolean") {
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid pinned value."
+        });
+      }
+
+      // Validate updatedAt
+      if (
+        typeof updatedAt !== "number" ||
+        !Number.isFinite(updatedAt) ||
+        updatedAt < 0
+      ) {
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid updatedAt value."
+        });
+      }
+
+      // Validate messages
+      if (
+        !Array.isArray(messages) ||
+        messages.length > 500
+      ) {
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid conversation messages."
+        });
+      }
+
+      const cleanMessages = [];
+
+      for (const item of messages) {
+
+        if (
+          !item ||
+          typeof item !== "object" ||
+          !["user", "assistant"].includes(item.role) ||
+          typeof item.content !== "string" ||
+          item.content.length > MAX_MESSAGE_CHARS
+        ) {
+          return res.status(400).json({
+            ok: false,
+            error: "Invalid conversation message."
+          });
+        }
+
+        cleanMessages.push({
+          role: item.role,
+          content: item.content
+        });
+
+      }
+
+      const conversationData = {
+        title: title.trim(),
+        pinned,
+        updatedAt,
+        messages: cleanMessages
+      };
+
+      // Keep the document below Firestore's 1 MiB limit.
+      const dataSize = Buffer.byteLength(
+        JSON.stringify(conversationData),
+        "utf8"
+      );
+
+      if (dataSize > 900000) {
+        return res.status(413).json({
+          ok: false,
+          error: "Conversation is too large to save."
+        });
+      }
+
+      // Always use the authenticated user's collection.
+      await getUserConversationsCollection(
+        req.user.uid
+      )
+        .doc(conversationId)
+        .set(conversationData);
+
+      return res.json({
+        ok: true,
+        message: "Conversation saved.",
+        id: conversationId
+      });
+
+    } catch (error) {
+
+      console.error(
+        "Save conversation failed:",
+        error.message
+      );
+
+      return res.status(500).json({
+        ok: false,
+        error: "Unable to save conversation."
+      });
+
+    }
+
+  }
+);
+
+// ==========================================
 // 10. MAIN CHAT ENDPOINT
 // ==========================================
 
