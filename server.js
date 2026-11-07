@@ -70,7 +70,6 @@ app.use(
   })
 );
 
-
 // ==========================================
 // 3. FIREBASE ADMIN INITIALIZATION
 // ==========================================
@@ -120,6 +119,19 @@ function getFirestore() {
   return admin.firestore();
 }
 
+// Get the authenticated user's conversations collection
+function getUserConversationsCollection(uid) {
+
+  if (!uid || typeof uid !== "string") {
+    throw new Error("Invalid user UID.");
+  }
+
+  return getFirestore()
+    .collection("users")
+    .doc(uid)
+    .collection("conversations");
+
+}
 
 // ==========================================
 // 4. FIREBASE AUTHENTICATION MIDDLEWARE
