@@ -784,7 +784,18 @@ app.post(
 
       const message = req.body?.message;
 
-      const history = req.body?.history || [];
+      let history = [];
+
+      try {
+           history = req.body?.history
+           ? JSON.parse(req.body.history)
+           : [];
+          } catch {
+            return res.status(400).json({
+            ok: false,
+            error: "Invalid conversation history format."
+            });
+          }
 
       if (
         typeof message !== "string" ||
