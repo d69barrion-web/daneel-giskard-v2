@@ -2951,7 +2951,6 @@ function scrollToBottom() {
 
 }
 
-
 // ==========================================
 // 11. CHAT CONNECTION
 // ==========================================
@@ -2971,11 +2970,11 @@ async function sendMessage() {
   }
 
   const input = $("messageInput");
-const editor = $("richMessageInput");
+  const editor = $("richMessageInput");
 
-const message = getEditorMarkdown();
+  const message = getEditorMarkdown();
 
-input.value = message;
+  input.value = message;
 
   if (!message) return;
 
@@ -3029,20 +3028,42 @@ input.value = message;
     const token =
       await currentUser.getIdToken();
 
+    // ======================================
+    // PREPARE MULTIPART FORM DATA
+    // ======================================
+
+    const formData = new FormData();
+
+    formData.append("message", message);
+
+    formData.append(
+      "history",
+      JSON.stringify(previousMessages)
+    );
+
+    selectedImages.forEach(image => {
+
+      formData.append(
+        "images",
+        image.file
+      );
+
+    });
+
+    // ======================================
+    // SEND REQUEST
+    // ======================================
+
     const response = await fetch(
       API_BASE_URL + "/chat",
       {
         method: "POST",
 
         headers: {
-          "Content-Type": "application/json",
           "Authorization": "Bearer " + token
         },
 
-        body: JSON.stringify({
-          message,
-          history: previousMessages
-        })
+        body: formData
       }
     );
 
@@ -3060,6 +3081,18 @@ input.value = message;
       "assistant",
       data.chat?.text || "No response received."
     );
+
+    // ======================================
+    // CLEAR SELECTED IMAGES AFTER SUCCESS
+    // ======================================
+
+    selectedImages.forEach(image => {
+      URL.revokeObjectURL(image.previewUrl);
+    });
+
+    selectedImages = [];
+
+    renderImagePreviews();
 
   } catch (error) {
 
@@ -3093,16 +3126,16 @@ $("richMessageInput").addEventListener(
   "keydown",
   event => {
 
+    // Hayaan ang editor na gumawa ng bagong paragraph
     if (event.key === "Enter") {
 
-      // Hayaan ang editor na gumawa ng bagong paragraph
       event.stopPropagation();
 
     }
 
   }
 );
-
+  
 // ==========================================
 // FEATURE MENU
 // ==========================================
