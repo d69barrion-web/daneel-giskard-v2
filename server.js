@@ -311,7 +311,8 @@ async function executeTool(
 async function runDaneel({
   user,
   message,
-  history
+  history,
+  images = []
 }) {
 
   if (!openai) {
@@ -320,13 +321,27 @@ async function runDaneel({
     );
   }
 
-  const input = [
-    ...history,
-    {
-      role: "user",
-      content: message
-    }
-  ];
+  const userContent = [
+  {
+    type: "input_text",
+    text: message
+  },
+
+  ...images.map(file => ({
+    type: "input_image",
+    image_url:
+      `data:${file.mimetype};base64,${file.buffer.toString("base64")}`,
+    detail: "auto"
+  }))
+];
+
+const input = [
+  ...history,
+  {
+    role: "user",
+    content: userContent
+  }
+];
 
   let response = await openai.responses.create(
     {
@@ -861,7 +876,8 @@ app.post(
       const result = await runDaneel({
         user: req.user,
         message: message.trim(),
-        history: cleanHistory
+        history: cleanHistory,
+        images: req.files || []
       });
 
       // Consistent JSON response for the frontend.
