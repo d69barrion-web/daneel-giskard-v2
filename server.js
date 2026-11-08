@@ -836,15 +836,7 @@ app.post(
         }
       }
 
-      if (
-        typeof message !== "string" ||
-        !message.trim()
-      ) {
-        return res.status(400).json({
-          ok: false,
-          error: "A valid message is required."
-        });
-      }
+      
 
       if (
         message.length > MAX_MESSAGE_CHARS
