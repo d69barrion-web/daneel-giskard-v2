@@ -321,19 +321,23 @@ async function runDaneel({
     );
   }
 
-  const userContent = [
-  {
+  const userContent = [];
+
+if (message.trim()) {
+  userContent.push({
     type: "input_text",
     text: message
-  },
+  });
+}
 
-  ...images.map(file => ({
+images.forEach(file => {
+  userContent.push({
     type: "input_image",
     image_url:
       `data:${file.mimetype};base64,${file.buffer.toString("base64")}`,
     detail: "auto"
-  }))
-];
+  });
+});
 
 const input = [
   ...history,
@@ -342,7 +346,7 @@ const input = [
     content: userContent
   }
 ];
-
+  
   let response = await openai.responses.create(
     {
       model: MODEL,
@@ -797,7 +801,21 @@ app.post(
 
     try {
 
-      const message = req.body?.message;
+      const message =
+        typeof req.body?.message === "string"
+        ? req.body.message
+        : "";
+
+      const hasImages =
+         Array.isArray(req.files) &&
+         req.files.length > 0;
+
+       if (!message.trim() && !hasImages) {
+         return res.status(400).json({
+         ok: false,
+         error: "A message or image is required."
+         });
+        }
       console.log("Uploaded images:", (req.files || []).map(file => ({
            name: file.originalname,
            type: file.mimetype,
