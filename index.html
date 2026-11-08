@@ -990,35 +990,89 @@ body.light .user .bubble {
   <div class="composer-editor-wrap">
 
     <div class="format-toolbar">
+<div class="format-toolbar">
 
-      <button type="button" data-command="bold" title="Bold">
-        <b>B</b>
-      </button>
+  <!-- FUTURE FEATURES BUTTON -->
+  <button
+    type="button"
+    id="featureMenuButton"
+    class="feature-menu-button"
+    title="More features"
+    aria-label="More features"
+    aria-expanded="false"
+    aria-controls="featureMenuPanel">
+    +
+  </button>
 
-      <button type="button" data-command="italic" title="Italic">
-        <i>I</i>
-      </button>
+  <!-- EXISTING RICH TEXT CONTROLS -->
+  <button type="button" data-command="bold" title="Bold">
+    <b>B</b>
+  </button>
 
-      <button type="button" data-command="formatBlock" data-value="H2" title="Heading">
-        H
-      </button>
+  <button type="button" data-command="italic" title="Italic">
+    <i>I</i>
+  </button>
 
-      <button type="button" data-command="insertUnorderedList" title="Bullet list">
-        •≡
-      </button>
+  <button type="button" data-command="formatBlock" data-value="H2" title="Heading">
+    H
+  </button>
 
-      <button type="button" data-command="insertOrderedList" title="Numbered list">
-        1.
-      </button>
+  <button type="button" data-command="insertUnorderedList" title="Bullet list">
+    •≡
+  </button>
 
-      <button type="button" data-command="formatBlock" data-value="PRE" title="Code block">
-        &lt;/&gt;
-      </button>
+  <button type="button" data-command="insertOrderedList" title="Numbered list">
+    1.
+  </button>
 
-      <button type="button" data-command="formatBlock" data-value="P" title="Normal paragraph">¶</button>
+  <button type="button" data-command="formatBlock" data-value="PRE" title="Code block">
+    &lt;/&gt;
+  </button>
 
-    </div>
+  <button type="button" data-command="formatBlock" data-value="P" title="Normal paragraph">
+    ¶
+  </button>
 
+</div>
+
+<!-- FLOATING FEATURE PANEL -->
+<div
+  id="featureMenuPanel"
+  class="feature-menu-panel hidden"
+  aria-label="Additional features">
+
+  <div class="feature-menu-header">
+    <span>More features</span>
+    <button type="button" id="closeFeatureMenu" aria-label="Close menu">
+      ×
+    </button>
+  </div>
+
+  <div class="feature-menu-items">
+
+    <button type="button" class="feature-menu-item" data-feature="image">
+      <span>🖼️</span>
+      <span>Images</span>
+    </button>
+
+    <button type="button" class="feature-menu-item" data-feature="files">
+      <span>📎</span>
+      <span>Files</span>
+    </button>
+
+    <button type="button" class="feature-menu-item" data-feature="research">
+      <span>🌐</span>
+      <span>Research</span>
+    </button>
+
+    <button type="button" class="feature-menu-item" data-feature="tools">
+      <span>🛠️</span>
+      <span>Tools</span>
+    </button>
+
+  </div>
+
+</div>
     <div
       id="richMessageInput"
       class="rich-editor"
