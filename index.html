@@ -3151,7 +3151,7 @@ const imageFeatureButton = document.querySelector(
   '[data-feature="image"]'
 );
 
-  // ==========================================
+// ==========================================
 // IMAGE PREVIEW
 // ==========================================
 
@@ -3212,7 +3212,6 @@ imageFileInput.addEventListener("change", () => {
 
   newFiles.forEach(file => {
 
-    // Avoid duplicate images
     const alreadySelected = selectedImages.some(image =>
       image.file.name === file.name &&
       image.file.size === file.size &&
@@ -3230,21 +3229,16 @@ imageFileInput.addEventListener("change", () => {
 
   renderImagePreviews();
 
-  // Allow selecting the same files again
   imageFileInput.value = "";
 
 });
 
-  renderImagePreviews();
-
-  // Allow selecting the same files again
-  imageFileInput.value = "";
-
-});
-  imageFeatureButton.addEventListener("click", () => {
+// Open image picker
+imageFeatureButton.addEventListener("click", () => {
   toggleFeatureMenu(false);
   imageFileInput.click();
 });
+  
 // ==========================================
 // 12. INITIALIZATION
 // ==========================================
