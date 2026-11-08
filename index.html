@@ -3151,9 +3151,35 @@ const imageFeatureButton = document.querySelector(
   '[data-feature="image"]'
 );
 
-imageFeatureButton.addEventListener("click", () => {
-  toggleFeatureMenu(false);
-  imageFileInput.click();
+// Receive selected images
+imageFileInput.addEventListener("change", () => {
+
+  const newFiles = Array.from(imageFileInput.files)
+    .filter(file => file.type.startsWith("image/"));
+
+  newFiles.forEach(file => {
+
+    // Avoid adding the exact same file twice
+    const alreadySelected = selectedImages.some(image =>
+      image.file.name === file.name &&
+      image.file.size === file.size &&
+      image.file.lastModified === file.lastModified
+    );
+
+    if (alreadySelected) return;
+
+    selectedImages.push({
+      file,
+      previewUrl: URL.createObjectURL(file)
+    });
+
+  });
+
+  renderImagePreviews();
+
+  // Allow selecting the same files again
+  imageFileInput.value = "";
+
 });
   // ==========================================
 // IMAGE PREVIEW
