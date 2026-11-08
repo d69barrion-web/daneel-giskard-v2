@@ -777,6 +777,7 @@ app.delete(
 app.post(
   "/chat",
   requireAuth,
+  upload.array("images", 5),
   async (req, res) => {
 
     try {
