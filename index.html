@@ -2237,29 +2237,8 @@ renderConversationList();
   }
 
 }
-    if (deleteButton) {
-  const conversationId = deleteButton.dataset.delete;
-
-  const index = conversations.findIndex(
-    item => item.id === conversationId
-  );
-
-  if (index === -1) return;
-
-  const conversation = conversations[index];
-
-  const confirmed = confirm(
-    `Delete "${conversation.title}"?\n\nThis cannot be undone.`
-  );
-
-  if (!confirmed) return;
-
-  // Remove conversation
-  conversations.splice(index, 1);
-
-  // If the deleted conversation was active,
-  // select the next available conversation
-  if (deleteButton) {
+     
+if (deleteButton) {
 
   const conversationId =
     deleteButton.dataset.delete;
@@ -2311,7 +2290,9 @@ renderConversationList();
     conversationId
   ).then(() => {
 
-    showStatus("Conversation deleted from cloud.");
+    showStatus(
+      "Conversation deleted from cloud."
+    );
 
   }).catch(error => {
 
@@ -2323,11 +2304,7 @@ renderConversationList();
   });
 
 }
-
-  saveLocalData();
-  renderConversationList();
-  renderMessages();
-}
+  
     if (pinButton) {
 
       const conversation =
