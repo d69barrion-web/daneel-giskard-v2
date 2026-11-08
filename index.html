@@ -1723,32 +1723,6 @@ async function deleteImageBlob(id) {
 
 }
   
-// TEMPORARY DATABASE TEST
-
-(async function testImageDatabase() {
-
-  try {
-
-    const db = await openImageDB();
-
-    alert(
-      "SUCCESS!\n\n" +
-      "Daneel Image DB is ready!\n\n" +
-      "Object stores: " +
-      [...db.objectStoreNames].join(", ")
-    );
-
-  } catch (error) {
-
-    alert(
-      "DATABASE ERROR!\n\n" +
-      error.message
-    );
-
-  }
-
-})();
-  
 function saveLocalData() {
 
   if (!currentUser) return;
