@@ -3099,7 +3099,19 @@ document.addEventListener("keydown", event => {
     toggleFeatureMenu(false);
   }
 });
+  
+// Open Android image picker
+const imageFileInput = $("imageFileInput");
 
+const imageFeatureButton = document.querySelector(
+  '[data-feature="image"]'
+);
+
+imageFeatureButton.addEventListener("click", () => {
+  toggleFeatureMenu(false);
+  imageFileInput.click();
+});
+  
 // ==========================================
 // 12. INITIALIZATION
 // ==========================================
