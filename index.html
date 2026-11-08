@@ -1536,6 +1536,193 @@ function storageKey(name) {
     "_" + name;
 }
 
+// =====================================
+// 4. DANEEL IMAGE STORAGE — INDEXEDDB
+// =====================================
+
+const IMAGE_DB_NAME = "DaneelGiskardImageDB";
+const IMAGE_DB_VERSION = 1;
+const IMAGE_STORE_NAME = "images";
+
+let imageDBPromise = null;
+
+
+// OPEN DATABASE
+
+function openImageDB() {
+
+  if (!("indexedDB" in window)) {
+    return Promise.reject(
+      new Error("IndexedDB is not supported by this browser.")
+    );
+  }
+
+  if (imageDBPromise) {
+    return imageDBPromise;
+  }
+
+  imageDBPromise = new Promise((resolve, reject) => {
+
+    const request = indexedDB.open(
+      IMAGE_DB_NAME,
+      IMAGE_DB_VERSION
+    );
+
+    request.onupgradeneeded = event => {
+
+      const db = event.target.result;
+
+      if (!db.objectStoreNames.contains(IMAGE_STORE_NAME)) {
+
+        db.createObjectStore(IMAGE_STORE_NAME, {
+          keyPath: "id"
+        });
+
+      }
+
+    };
+
+    request.onsuccess = event => {
+
+      const db = event.target.result;
+
+      db.onversionchange = () => {
+        db.close();
+        imageDBPromise = null;
+      };
+
+      resolve(db);
+
+    };
+
+    request.onerror = () => {
+      imageDBPromise = null;
+      reject(request.error);
+    };
+
+    request.onblocked = () => {
+      console.warn(
+        "Image database upgrade is blocked by another connection."
+      );
+    };
+
+  });
+
+  return imageDBPromise;
+
+}
+
+
+// SAVE IMAGE
+
+async function saveImageBlob(id, file) {
+
+  if (!(file instanceof Blob)) {
+    throw new Error("Invalid image file.");
+  }
+
+  const db = await openImageDB();
+
+  return new Promise((resolve, reject) => {
+
+    const transaction = db.transaction(
+      IMAGE_STORE_NAME,
+      "readwrite"
+    );
+
+    transaction.objectStore(IMAGE_STORE_NAME).put({
+
+      id,
+      blob: file,
+      name: file.name || "image",
+      mimeType: file.type || "application/octet-stream",
+      lastModified: file.lastModified || null,
+      createdAt: Date.now()
+
+    });
+
+    transaction.oncomplete = () => resolve(true);
+
+    transaction.onerror = () => {
+      reject(transaction.error);
+    };
+
+    transaction.onabort = () => {
+      reject(
+        transaction.error ||
+        new Error("Image storage transaction aborted.")
+      );
+    };
+
+  });
+
+}
+
+
+// GET IMAGE
+
+async function getImageBlob(id) {
+
+  const db = await openImageDB();
+
+  return new Promise((resolve, reject) => {
+
+    const transaction = db.transaction(
+      IMAGE_STORE_NAME,
+      "readonly"
+    );
+
+    const request = transaction
+      .objectStore(IMAGE_STORE_NAME)
+      .get(id);
+
+    request.onsuccess = () => {
+      resolve(request.result || null);
+    };
+
+    request.onerror = () => {
+      reject(request.error);
+    };
+
+  });
+
+}
+
+
+// DELETE IMAGE
+
+async function deleteImageBlob(id) {
+
+  const db = await openImageDB();
+
+  return new Promise((resolve, reject) => {
+
+    const transaction = db.transaction(
+      IMAGE_STORE_NAME,
+      "readwrite"
+    );
+
+    transaction
+      .objectStore(IMAGE_STORE_NAME)
+      .delete(id);
+
+    transaction.oncomplete = () => resolve(true);
+
+    transaction.onerror = () => {
+      reject(transaction.error);
+    };
+
+    transaction.onabort = () => {
+      reject(
+        transaction.error ||
+        new Error("Image deletion transaction aborted.")
+      );
+    };
+
+  });
+
+}
+
 function saveLocalData() {
 
   if (!currentUser) return;
