@@ -1852,7 +1852,7 @@ async function loadFirestoreConversations() {
 // ==========================================
 
 async function saveFirestoreConversation(conversation) {
-
+  
   if (!conversation || !conversation.id) {
     throw new Error("Invalid conversation.");
   }
@@ -1879,6 +1879,49 @@ async function saveFirestoreConversation(conversation) {
   );
 
   return data;
+
+}
+  
+// ==========================================
+// DELETE CONVERSATION FROM FIRESTORE
+// ==========================================
+
+async function deleteFirestoreConversation(conversationId) {
+
+  if (!conversationId) {
+    throw new Error("Invalid conversation ID.");
+  }
+
+  if (!currentUser) {
+    throw new Error("User is not signed in.");
+  }
+
+  const ownerUid = currentUser.uid;
+  const queueKey = ownerUid + "_" + conversationId;
+
+  // Wait for pending saves before deleting.
+  const pendingSave =
+    firestoreSaveQueues.get(queueKey);
+
+  if (pendingSave) {
+    await pendingSave.catch(() => {});
+  }
+
+  // Make sure the same user is still signed in.
+  if (
+    !currentUser ||
+    currentUser.uid !== ownerUid
+  ) {
+    throw new Error("User changed before deletion.");
+  }
+
+  return await firestoreRequest(
+    "/conversations/" +
+    encodeURIComponent(conversationId),
+    {
+      method: "DELETE"
+    }
+  );
 
 }
   
@@ -2216,18 +2259,70 @@ renderConversationList();
 
   // If the deleted conversation was active,
   // select the next available conversation
+  if (deleteButton) {
+
+  const conversationId =
+    deleteButton.dataset.delete;
+
+  const index = conversations.findIndex(
+    item => item.id === conversationId
+  );
+
+  if (index === -1) return;
+
+  const conversation = conversations[index];
+
+  const confirmed = confirm(
+    `Delete "${conversation.title}"?\n\nThis cannot be undone.`
+  );
+
+  if (!confirmed) return;
+
+  // Remove from local conversations
+  conversations.splice(index, 1);
+
+  // Select another conversation if needed
   if (activeConversationId === conversationId) {
+
     const sorted = [...conversations].sort((a, b) => {
+
       if (a.pinned !== b.pinned) {
         return a.pinned ? -1 : 1;
       }
+
       return b.updatedAt - a.updatedAt;
+
     });
 
     activeConversationId = sorted.length
       ? sorted[0].id
       : null;
+
   }
+
+  // Save local changes
+  saveLocalData();
+
+  renderConversationList();
+  renderMessages();
+
+  // Delete from Firestore
+  deleteFirestoreConversation(
+    conversationId
+  ).then(() => {
+
+    showStatus("Conversation deleted from cloud.");
+
+  }).catch(error => {
+
+    showStatus(
+      "Deleted locally, but cloud deletion failed: " +
+      error.message
+    );
+
+  });
+
+}
 
   saveLocalData();
   renderConversationList();
