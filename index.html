@@ -2976,7 +2976,9 @@ async function sendMessage() {
 
   input.value = message;
 
-  if (!message) return;
+  const hasImages = selectedImages.length > 0;
+
+    if (!message.trim() && !hasImages) return;
 
   if (
     API_BASE_URL.includes("YOUR-RENDER-SERVICE")
