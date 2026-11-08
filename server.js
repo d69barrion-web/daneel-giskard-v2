@@ -783,7 +783,13 @@ app.post(
     try {
 
       const message = req.body?.message;
-
+      console.log("Uploaded images:", (req.files || []).map(file => ({
+           name: file.originalname,
+           type: file.mimetype,
+           size: file.size,
+      bufferReceived: Buffer.isBuffer(file.buffer)
+      })));
+      
       let history = req.body?.history ?? [];
 
        if (typeof history === "string") {
