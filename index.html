@@ -1002,6 +1002,9 @@ body.light .user .bubble {
 
 .image-preview-area {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  flex: 0 0 100%;
   display: flex;
   flex-wrap: nowrap;
   gap: 10px;
@@ -1009,6 +1012,7 @@ body.light .user .bubble {
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
 }
 
 .image-preview-area.hidden {
