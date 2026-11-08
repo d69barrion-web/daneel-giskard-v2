@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
 import admin from "firebase-admin";
+import multer from "multer";
 
 // ==========================================
 // 1. BASIC CONFIGURATION
