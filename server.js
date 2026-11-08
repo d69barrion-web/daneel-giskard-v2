@@ -34,6 +34,34 @@ const openai = process.env.OPENAI_API_KEY
     })
   : null;
 
+// ==========================================
+// IMAGE UPLOAD CONFIGURATION
+// ==========================================
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+    files: 5,
+    fields: 2,
+    parts: 7,
+    fieldSize: 2 * 1024 * 1024
+  },
+
+  fileFilter(req, file, callback) {
+
+    if (!file.mimetype.startsWith("image/")) {
+      return callback(
+        new Error("Only image files are allowed.")
+      );
+    }
+
+    callback(null, true);
+
+  }
+
+});
 
 // ==========================================
 // 2. CORS AND REQUEST CONFIGURATION
