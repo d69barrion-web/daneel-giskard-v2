@@ -998,6 +998,49 @@ body.light .user .bubble {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+  /* IMAGE PREVIEW */
+
+.image-preview-area {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 5px 0;
+}
+
+.image-preview-area.hidden {
+  display: none;
+}
+
+.image-preview-item {
+  position: relative;
+  width: 76px;
+  height: 76px;
+}
+
+.image-preview-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.remove-preview-image {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 23px;
+  height: 23px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+  
 </style>
 </head>
 
@@ -1056,10 +1099,6 @@ body.light .user .bubble {
     </div>
 
   </main>
-
-
-
-<!-- COMPOSER -->
 
 <!-- COMPOSER -->
 
@@ -1162,6 +1201,11 @@ body.light .user .bubble {
   multiple
   hidden
 />
+    <!-- SELECTED IMAGE PREVIEWS -->
+<div
+  id="imagePreviewArea"
+  class="image-preview-area hidden">
+</div>
     <!-- MESSAGE EDITOR -->
     <div
       id="richMessageInput"
@@ -3110,6 +3154,80 @@ const imageFeatureButton = document.querySelector(
 imageFeatureButton.addEventListener("click", () => {
   toggleFeatureMenu(false);
   imageFileInput.click();
+});
+  // ==========================================
+// IMAGE PREVIEW
+// ==========================================
+
+const imagePreviewArea = $("imagePreviewArea");
+
+let selectedImages = [];
+
+// Display selected images
+function renderImagePreviews() {
+
+  imagePreviewArea.innerHTML = "";
+
+  if (selectedImages.length === 0) {
+    imagePreviewArea.classList.add("hidden");
+    return;
+  }
+
+  imagePreviewArea.classList.remove("hidden");
+
+  selectedImages.forEach((image, index) => {
+
+    const item = document.createElement("div");
+    item.className = "image-preview-item";
+
+    const img = document.createElement("img");
+    img.src = image.previewUrl;
+    img.alt = image.file.name;
+
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "remove-preview-image";
+    removeButton.textContent = "×";
+    removeButton.setAttribute("aria-label", "Remove image");
+
+    removeButton.addEventListener("click", () => {
+
+      URL.revokeObjectURL(image.previewUrl);
+
+      selectedImages.splice(index, 1);
+
+      renderImagePreviews();
+
+    });
+
+    item.appendChild(img);
+    item.appendChild(removeButton);
+
+    imagePreviewArea.appendChild(item);
+
+  });
+}
+
+// Receive selected images
+imageFileInput.addEventListener("change", () => {
+
+  // Release previous preview URLs
+  selectedImages.forEach(image => {
+    URL.revokeObjectURL(image.previewUrl);
+  });
+
+  selectedImages = Array.from(imageFileInput.files)
+    .filter(file => file.type.startsWith("image/"))
+    .map(file => ({
+      file,
+      previewUrl: URL.createObjectURL(file)
+    }));
+
+  renderImagePreviews();
+
+  // Allow selecting the same files again
+  imageFileInput.value = "";
+
 });
   
 // ==========================================
