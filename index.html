@@ -1847,6 +1847,44 @@ async function loadFirestoreConversations() {
 
 }
   
+async function loadConversationsFromCloud() {
+  if (!currentUser) {
+    throw new Error("User is not signed in.");
+  }
+
+  const ownerUid = currentUser.uid;
+
+  const cloudConversations =
+    await loadFirestoreConversations();
+
+  // Make sure the same user is still signed in.
+  if (!currentUser || currentUser.uid !== ownerUid) {
+    return;
+  }
+
+  conversations = cloudConversations;
+
+  // Preserve the active conversation if it still exists.
+  const activeExists = conversations.some(
+    item => item.id === activeConversationId
+  );
+
+  if (!activeExists) {
+    const sorted = [...conversations].sort(
+      (a, b) =>
+        Number(b.pinned) - Number(a.pinned) ||
+        b.updatedAt - a.updatedAt
+    );
+
+    activeConversationId =
+      sorted.length > 0 ? sorted[0].id : null;
+  }
+
+  saveLocalData();
+  renderConversationList();
+  renderMessages();
+}
+
 // ==========================================
 // SAVE CONVERSATION TO FIRESTORE
 // ==========================================
