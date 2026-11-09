@@ -2813,7 +2813,11 @@ function showWelcome() {
 
 
 function renderMessages() {
+  messageImageObjectUrls.forEach(url => {
+  URL.revokeObjectURL(url);
+});
 
+messageImageObjectUrls.clear();
   const conversation = getActiveConversation();
 
   if (!conversation) {
@@ -2845,7 +2849,25 @@ function renderMessages() {
             </div>
 
             <div class="bubble">
-  ${content}
+
+              ${content}
+
+              ${
+    Array.isArray(message.images) && message.images.length > 0
+      ? `
+        <div class="message-image-list">
+          ${message.images.map(image => `
+            <div
+              class="message-image-slot"
+              data-image-id="${image.id}">
+              Loading image...
+            </div>
+          `).join("")}
+        </div>
+      `
+      : ""
+  }
+
 </div>
 
 <div class="message-actions">
@@ -2864,6 +2886,8 @@ function renderMessages() {
       `;
 
     }).join("");
+  
+    loadMessageImages();
   
 // COPY ENTIRE MESSAGE
 
@@ -2960,7 +2984,66 @@ $("messages").querySelectorAll("pre code").forEach(block => {
 
 }
 
+// ==========================================
+// LOAD MESSAGE IMAGES FROM INDEXEDDB
+// ==========================================
 
+async function loadMessageImages() {
+
+  const slots = $("messages").querySelectorAll(
+    ".message-image-slot"
+  );
+
+  for (const slot of slots) {
+
+    const imageId = slot.dataset.imageId;
+
+    if (!imageId) continue;
+
+    try {
+
+      const record = await getImageBlob(imageId);
+
+      if (!slot.isConnected) continue;
+
+      if (!record || !(record.blob instanceof Blob)) {
+        slot.textContent = "Image unavailable.";
+        continue;
+      }
+
+      const objectUrl = URL.createObjectURL(record.blob);
+
+      if (!slot.isConnected) {
+        URL.revokeObjectURL(objectUrl);
+        continue;
+      }
+
+      messageImageObjectUrls.add(objectUrl);
+
+      const img = document.createElement("img");
+
+      img.src = objectUrl;
+      img.alt = record.name || "Attached image";
+      img.style.maxWidth = "100%";
+      img.style.maxHeight = "320px";
+      img.style.objectFit = "contain";
+      img.style.borderRadius = "10px";
+      img.style.display = "block";
+
+      slot.replaceChildren(img);
+
+    } catch (error) {
+
+      if (slot.isConnected) {
+        slot.textContent = "Unable to load image.";
+      }
+
+    }
+
+  }
+
+}
+  
 function openCodePreview(code) {
 
   const previewTab = window.open("", "_blank");
@@ -3409,7 +3492,8 @@ const imageFeatureButton = document.querySelector(
 const imagePreviewArea = $("imagePreviewArea");
 
 let selectedImages = [];
-
+// Object URLs used by images inside chat messages
+let messageImageObjectUrls = new Set();
 // Display selected images
 function renderImagePreviews() {
 
