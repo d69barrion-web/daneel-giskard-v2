@@ -2291,7 +2291,7 @@ async function loadConversationsFromCloud() {
 // ==========================================
 
 async function saveFirestoreConversation(conversation) {
-  
+
   if (!conversation || !conversation.id) {
     throw new Error("Invalid conversation.");
   }
@@ -2303,7 +2303,18 @@ async function saveFirestoreConversation(conversation) {
 
     messages: conversation.messages.map(item => ({
       role: item.role,
-      content: item.content
+      content: item.content,
+
+      ...(Array.isArray(item.images) && item.images.length > 0
+        ? {
+            images: item.images.map(image => ({
+              id: image.id,
+              name: image.name,
+              mimeType: image.mimeType,
+              size: image.size
+            }))
+          }
+        : {})
     }))
   };
 
@@ -2312,13 +2323,11 @@ async function saveFirestoreConversation(conversation) {
     encodeURIComponent(conversation.id),
     {
       method: "PUT",
-
       body: JSON.stringify(conversationData)
     }
   );
 
   return data;
-
 }
   
 // ==========================================
