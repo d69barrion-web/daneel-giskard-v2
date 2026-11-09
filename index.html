@@ -3507,43 +3507,6 @@ async function testImageGeneration() {
 
 }
 
-
-// Temporary test controls
-
-const testButton = document.createElement("button");
-
-testButton.id = "testImageGenerationButton";
-testButton.textContent = "Test Image Generation";
-testButton.onclick = testImageGeneration;
-
-testButton.style.cssText = `
-  position:fixed;
-  right:12px;
-  bottom:90px;
-  z-index:9999;
-  padding:12px;
-  border-radius:10px;
-`;
-
-document.body.appendChild(testButton);
-
-const testPreview = document.createElement("div");
-
-testPreview.id = "testImageGenerationPreview";
-
-testPreview.style.cssText = `
-  position:fixed;
-  inset:10px;
-  z-index:9998;
-  overflow-y:auto;
-  background:var(--panel);
-  padding:12px;
-  border-radius:12px;
-  display:none;
-`;
-
-document.body.appendChild(testPreview);
-
 $("sendButton").onclick = sendMessage;
 
 
