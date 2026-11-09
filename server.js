@@ -16,6 +16,12 @@ const PORT = process.env.PORT || 3000;
 const MODEL =
   process.env.OPENAI_MODEL || "gpt-5.4-mini";
 
+const IMAGE_GENERATION_MODEL =
+  "gpt-image-1.5";
+
+const IMAGE_EDIT_MODEL =
+  "gpt-image-2.5-flare-2026-09-08";
+
 const MAX_TOOL_ROUNDS =
   Number(process.env.MAX_TOOL_ROUNDS || 6);
 
