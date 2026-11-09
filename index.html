@@ -3306,10 +3306,12 @@ async function sendMessage() {
     // ======================================
 
     await Promise.all(
-      imagesToSend.map(image =>
-        saveImageBlob(image.id, image.file)
-      )
-    );
+  imagesToSend.map(image =>
+    saveImageBlob(image.id, image.file, {
+      name: image.file.name
+    })
+  )
+);
 
     const imageMetadata = imagesToSend.map(image => ({
       id: image.id,
