@@ -3155,7 +3155,8 @@ async function sendMessage() {
   input.value = message;
 
   const hasImages = selectedImages.length > 0;
-
+  const imagesToSend = [...selectedImages];
+  
     if (!message.trim() && !hasImages) return;
 
   if (
@@ -3183,10 +3184,7 @@ async function sendMessage() {
       content: item.content
     }));
 
-  input.value = "";
-  editor.innerHTML = "";
 
-  addMessage("user", message);
 
   isSending = true;
 
@@ -3204,6 +3202,32 @@ async function sendMessage() {
   scrollToBottom();
 
   try {
+
+    // ======================================
+    // SAVE IMAGES TO INDEXEDDB
+    // ======================================
+
+    await Promise.all(
+      imagesToSend.map(image =>
+        saveImageBlob(image.id, image.file)
+      )
+    );
+
+    const imageMetadata = imagesToSend.map(image => ({
+      id: image.id,
+      name: image.file.name,
+      mimeType: image.file.type,
+      size: image.file.size
+    }));
+
+    // ======================================
+    // SAVE USER MESSAGE TO CONVERSATION
+    // ======================================
+
+    addMessage("user", message, imageMetadata);
+
+    input.value = "";
+    editor.innerHTML = "";
 
     const token =
       await currentUser.getIdToken();
@@ -3266,13 +3290,19 @@ async function sendMessage() {
     // CLEAR SELECTED IMAGES AFTER SUCCESS
     // ======================================
 
-    selectedImages.forEach(image => {
-      URL.revokeObjectURL(image.previewUrl);
-    });
+    imagesToSend.forEach(image => {
+  URL.revokeObjectURL(image.previewUrl);
+});
 
-    selectedImages = [];
+const sentImageIds = new Set(
+  imagesToSend.map(image => image.id)
+);
 
-    renderImagePreviews();
+selectedImages = selectedImages.filter(
+  image => !sentImageIds.has(image.id)
+);
+
+renderImagePreviews();
 
   } catch (error) {
 
