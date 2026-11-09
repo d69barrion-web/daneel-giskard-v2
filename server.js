@@ -681,10 +681,50 @@ app.put(
           });
         }
 
-        cleanMessages.push({
-          role: item.role,
-          content: item.content
-        });
+        const cleanMessage = {
+  role: item.role,
+  content: item.content
+};
+
+if (Array.isArray(item.images)) {
+
+  if (item.images.length > 5) {
+    return res.status(400).json({
+      ok: false,
+      error: "Too many images in one message."
+    });
+  }
+
+  cleanMessage.images = [];
+
+  for (const image of item.images) {
+
+    if (
+      !image ||
+      typeof image.id !== "string" ||
+      !/^[A-Za-z0-9_-]{1,128}$/.test(image.id) ||
+      typeof image.name !== "string" ||
+      typeof image.mimeType !== "string" ||
+      typeof image.size !== "number" ||
+      !Number.isFinite(image.size) ||
+      image.size < 0
+    ) {
+      return res.status(400).json({
+        ok: false,
+        error: "Invalid image metadata."
+      });
+    }
+
+    cleanMessage.images.push({
+      id: image.id,
+      name: image.name,
+      mimeType: image.mimeType,
+      size: image.size
+    });
+  }
+}
+
+cleanMessages.push(cleanMessage);
 
       }
 
