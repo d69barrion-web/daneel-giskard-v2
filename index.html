@@ -3259,6 +3259,7 @@ richEditor.addEventListener("input", () => {
 
 });
 
+
 function addMessage(role, content, images = []) {
 
   const conversation =
@@ -3283,16 +3284,29 @@ function addMessage(role, content, images = []) {
   ) {
 
     conversation.title =
-      content.slice(0,45) +
+      content.slice(0, 45) +
       (content.length > 45 ? "..." : "");
 
   }
 
+  // Save locally first
   saveLocalData();
+
+  // Synchronize the updated conversation to Firestore
+  queueFirestoreSave(conversation).catch(error => {
+
+    showStatus(
+      "Local copy saved, but cloud sync failed: " +
+      error.message
+    );
+
+  });
+
   renderConversationList();
   renderMessages();
 
 }
+
 
 
 function scrollToBottom() {
