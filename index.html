@@ -3219,7 +3219,32 @@ async function sendMessage() {
       mimeType: image.file.type,
       size: image.file.size
     }));
+    
+// TEMPORARY INDEXEDDB VERIFICATION
 
+const verification = await Promise.all(
+  imageMetadata.map(async image => {
+    const saved = await getImageBlob(image.id);
+
+    return (
+      saved &&
+      saved.blob instanceof Blob &&
+      saved.blob.size === image.size &&
+      saved.name === image.name
+    );
+  })
+);
+
+if (!verification.every(Boolean)) {
+  throw new Error("IndexedDB image verification failed.");
+}
+
+alert(
+  "SUCCESS!\n\n" +
+  verification.length +
+  " image(s) saved and retrieved from IndexedDB."
+);
+    
     // ======================================
     // SAVE USER MESSAGE TO CONVERSATION
     // ======================================
