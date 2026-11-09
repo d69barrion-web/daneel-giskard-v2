@@ -1615,46 +1615,52 @@ function openImageDB() {
 
 // SAVE IMAGE
 
-async function saveImageBlob(id, file) {
+async function saveImageBlob(imageId, blob, metadata = {}) {
 
-  if (!(file instanceof Blob)) {
-    throw new Error("Invalid image file.");
+  if (!currentUser) {
+    throw new Error("Please sign in first.");
+  }
+
+  if (!imageId) {
+    throw new Error("Missing image ID.");
+  }
+
+  if (!(blob instanceof Blob)) {
+    throw new Error("Invalid image data.");
   }
 
   const db = await openImageDB();
 
-  return new Promise((resolve, reject) => {
+  const imageRecord = {
+    id: imageId,
+    uid: currentUser.uid,
+    blob,
+    name: metadata.name || blob.name || "Attached image",
+    mimeType: blob.type || "image/png",
+    conversationId: metadata.conversationId || null,
+    prompt: metadata.prompt || "",
+    mode: metadata.mode || "generation",
+    createdAt: Date.now()
+  };
+
+  await new Promise((resolve, reject) => {
 
     const transaction = db.transaction(
       IMAGE_STORE_NAME,
       "readwrite"
     );
 
-    transaction.objectStore(IMAGE_STORE_NAME).put({
+    transaction.objectStore(
+      IMAGE_STORE_NAME
+    ).put(imageRecord);
 
-      id,
-      blob: file,
-      name: file.name || "image",
-      mimeType: file.type || "application/octet-stream",
-      lastModified: file.lastModified || null,
-      createdAt: Date.now()
-
-    });
-
-    transaction.oncomplete = () => resolve(true);
-
-    transaction.onerror = () => {
-      reject(transaction.error);
-    };
-
-    transaction.onabort = () => {
-      reject(
-        transaction.error ||
-        new Error("Image storage transaction aborted.")
-      );
-    };
+    transaction.oncomplete = resolve;
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
 
   });
+
+  return imageRecord.id;
 
 }
 
