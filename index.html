@@ -3091,43 +3091,34 @@ richEditor.addEventListener("input", () => {
 });
 
 
-function addMessage(role, content) {
+function addMessage(role, content, images = []) {
+  const conversation = getActiveConversation() || createConversation();
 
-  const conversation =
-    getActiveConversation() || createConversation();
-
-  conversation.messages.push({
+  const message = {
     role,
     content
-  });
+  };
 
+  if (images.length > 0) {
+    message.images = images;
+  }
+
+  conversation.messages.push(message);
   conversation.updatedAt = Date.now();
 
-  if (
-    role === "user" &&
-    conversation.title === "New conversation"
-  ) {
-
+  if (role === "user" && conversation.title === "New conversation") {
     conversation.title =
-      content.slice(0,45) +
-      (content.length > 45 ? "..." : "");
-
+      content.slice(0,45) + (content.length > 45 ? "..." : "");
   }
 
   saveLocalData();
 
-queueFirestoreSave(conversation).catch(error => {
+  queueFirestoreSave(conversation).catch(error => {
+    showStatus("Local copy saved, but cloud sync failed: " + error.message);
+  });
 
-  showStatus(
-    "Local copy saved, but cloud sync failed: " +
-    error.message
-  );
-
-});
-
-renderConversationList();
-renderMessages();
-
+  renderConversationList();
+  renderMessages();
 }
 
 
@@ -3451,9 +3442,10 @@ imageFileInput.addEventListener("change", () => {
     if (alreadySelected) return;
 
     selectedImages.push({
-      file,
-      previewUrl: URL.createObjectURL(file)
-    });
+  id: crypto.randomUUID(),
+  file,
+  previewUrl: URL.createObjectURL(file)
+});
 
   });
 
