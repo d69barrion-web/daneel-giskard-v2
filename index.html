@@ -3420,6 +3420,117 @@ renderImagePreviews();
 
 }
 
+async function testImageGeneration() {
+
+  if (!currentUser) {
+    showStatus("Please sign in first.");
+    return;
+  }
+
+  const prompt = window.prompt(
+    "Describe the image you want to generate:"
+  );
+
+  if (!prompt?.trim()) return;
+
+  const button = $("testImageGenerationButton");
+  button.disabled = true;
+  button.textContent = "Generating...";
+
+  try {
+
+    const token = await currentUser.getIdToken();
+
+    const response = await fetch(
+      API_BASE_URL + "/images/generate",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + token,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          prompt: prompt.trim()
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      throw new Error(
+        data.error || "Image generation failed."
+      );
+    }
+
+    const image = document.createElement("img");
+
+    image.src =
+      `data:${data.image.mimeType};base64,${data.image.data}`;
+
+    image.style.cssText = `
+      display:block;
+      max-width:100%;
+      height:auto;
+      margin:16px auto;
+      border-radius:12px;
+    `;
+
+    const preview = $("testImageGenerationPreview");
+    preview.style.display = "block";
+    preview.replaceChildren(image);
+
+    showStatus("Image generation successful!");
+
+  } catch (error) {
+
+    showStatus("Image generation failed: " + error.message);
+
+  } finally {
+
+    button.disabled = false;
+    button.textContent = "Test Image Generation";
+
+  }
+
+}
+
+
+// Temporary test controls
+
+const testButton = document.createElement("button");
+
+testButton.id = "testImageGenerationButton";
+testButton.textContent = "Test Image Generation";
+testButton.onclick = testImageGeneration;
+
+testButton.style.cssText = `
+  position:fixed;
+  right:12px;
+  bottom:90px;
+  z-index:9999;
+  padding:12px;
+  border-radius:10px;
+`;
+
+document.body.appendChild(testButton);
+
+const testPreview = document.createElement("div");
+
+testPreview.id = "testImageGenerationPreview";
+
+testPreview.style.cssText = `
+  position:fixed;
+  inset:10px;
+  z-index:9998;
+  overflow-y:auto;
+  background:var(--panel);
+  padding:12px;
+  border-radius:12px;
+  display:none;
+`;
+
+document.body.appendChild(testPreview);
 
 $("sendButton").onclick = sendMessage;
 
