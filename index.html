@@ -1613,6 +1613,77 @@ function openImageDB() {
 }
 
 
+async function generateImageAndSave(prompt) {
+
+  if (!currentUser) {
+    throw new Error("Please sign in first.");
+  }
+
+  if (!prompt || !prompt.trim()) {
+    throw new Error("Image prompt is empty.");
+  }
+
+  const token = await currentUser.getIdToken();
+
+  const response = await fetch(
+    API_BASE_URL + "/images/generate",
+    {
+      method: "POST",
+
+      headers: {
+        "Authorization": "Bearer " + token,
+        "Content-Type": "application/json"
+      },
+
+      body: JSON.stringify({
+        prompt: prompt.trim()
+      })
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok || !data.ok) {
+    throw new Error(
+      data.error || "Image generation failed."
+    );
+  }
+
+  if (!data.image?.data || !data.image?.mimeType) {
+    throw new Error("Invalid image response.");
+  }
+
+  // Convert Base64 into a Blob
+  const imageBlob = await fetch(
+    `data:${data.image.mimeType};base64,${data.image.data}`
+  ).then(response => response.blob());
+
+  // Use one ID for IndexedDB and conversation metadata
+  const imageId = crypto.randomUUID();
+
+  const imageName = "Daneel generated image";
+
+  // Save actual image to IndexedDB
+  await saveImageBlob(
+    imageId,
+    imageBlob,
+    {
+      name: imageName,
+      prompt: prompt.trim(),
+      mode: "generation"
+    }
+  );
+
+  // Return metadata for the conversation
+  return {
+    id: imageId,
+    name: imageName,
+    mimeType: imageBlob.type,
+    size: imageBlob.size
+  };
+
+}
+
 // SAVE IMAGE
 
 async function saveImageBlob(imageId, blob, metadata = {}) {
@@ -3231,6 +3302,73 @@ function scrollToBottom() {
 
 }
 
+async function sendImageGenerationMessage(prompt) {
+
+  if (isSending) return;
+
+  if (!currentUser) {
+    openSettings();
+    showStatus("Please sign in first.");
+    return;
+  }
+
+  if (API_BASE_URL.includes("YOUR-RENDER-SERVICE")) {
+    showStatus("Backend connection is not configured yet.");
+    return;
+  }
+
+  isSending = true;
+  $("sendButton").disabled = true;
+
+  showStatus("Daneel is generating an image...");
+
+  const typing = document.createElement("div");
+  typing.className = "typing";
+  typing.textContent = "Daneel is creating your image...";
+
+  $("messages").appendChild(typing);
+  scrollToBottom();
+
+  try {
+
+    // Save the user's image request
+    addMessage("user", "/image " + prompt);
+
+    $("messageInput").value = "";
+    $("richMessageInput").innerHTML = "";
+
+    // Generate image and save its Blob to IndexedDB
+    const imageMetadata = await generateImageAndSave(prompt);
+
+    // Add generated image to conversation
+    addMessage(
+      "assistant",
+      "Here's the image I generated.",
+      [imageMetadata]
+    );
+
+  } catch (error) {
+
+    addMessage(
+      "assistant",
+      "Hindi ko nagawang ma-generate ang image.\n\n" +
+      error.message
+    );
+
+  } finally {
+
+    typing.remove();
+
+    isSending = false;
+    $("sendButton").disabled = false;
+
+    showStatus("");
+    $("richMessageInput").focus();
+
+  }
+
+}
+
 // ==========================================
 // 11. CHAT CONNECTION
 // ==========================================
@@ -3255,6 +3393,35 @@ async function sendMessage() {
   const message = getEditorMarkdown();
 
   input.value = message;
+  
+// ======================================
+// IMAGE GENERATION COMMAND
+// ======================================
+
+const imageCommand = message.match(
+  /^\/image(?:\s+([\s\S]*))?$/i
+);
+
+if (imageCommand) {
+
+  const prompt = (imageCommand[1] || "").trim();
+
+  if (!prompt) {
+    showStatus("Please provide an image description.");
+    return;
+  }
+
+  if (selectedImages.length > 0) {
+    showStatus(
+      "Please remove selected attachments before generating an image."
+    );
+    return;
+  }
+
+  await sendImageGenerationMessage(prompt);
+  return;
+
+}
 
   const hasImages = selectedImages.length > 0;
   const imagesToSend = [...selectedImages];
