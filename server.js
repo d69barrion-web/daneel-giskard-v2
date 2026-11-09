@@ -837,6 +837,91 @@ app.delete(
 );
 
 // ==========================================
+// 9.4 IMAGE GENERATION ENDPOINT
+// ==========================================
+
+app.post(
+  "/images/generate",
+  requireAuth,
+  async (req, res) => {
+
+    try {
+
+      if (!openai) {
+        return res.status(503).json({
+          ok: false,
+          error: "OpenAI API key is not configured."
+        });
+      }
+
+      const prompt =
+        typeof req.body?.prompt === "string"
+          ? req.body.prompt.trim()
+          : "";
+
+      if (!prompt) {
+        return res.status(400).json({
+          ok: false,
+          error: "An image prompt is required."
+        });
+      }
+
+      if (prompt.length > 10000) {
+        return res.status(413).json({
+          ok: false,
+          error: "Image prompt is too long."
+        });
+      }
+
+      const result = await openai.images.generate(
+        {
+          model: IMAGE_GENERATION_MODEL,
+          prompt,
+          n: 1
+        },
+        {
+          signal: AbortSignal.timeout(180000)
+        }
+      );
+
+      const imageBase64 =
+        result.data?.[0]?.b64_json;
+
+      if (
+        typeof imageBase64 !== "string" ||
+        !imageBase64
+      ) {
+        throw new Error(
+          "OpenAI returned no generated image."
+        );
+      }
+
+      return res.json({
+        ok: true,
+        image: {
+          data: imageBase64,
+          mimeType: "image/png"
+        }
+      });
+
+    } catch (error) {
+
+      console.error(
+        "Image generation failed:",
+        error.message
+      );
+
+      return res.status(502).json({
+        ok: false,
+        error: "Unable to generate the image."
+      });
+
+    }
+
+  }
+);
+
+// ==========================================
 // 10. MAIN CHAT ENDPOINT
 // ==========================================
 
