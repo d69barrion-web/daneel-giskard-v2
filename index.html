@@ -1777,7 +1777,20 @@ async function saveImageBlob(imageId, blob, metadata = {}) {
 
 // GET IMAGE
 
+
 async function getImageBlob(id) {
+
+  // Require an authenticated user.
+  if (!currentUser || !currentUser.uid) {
+    return null;
+  }
+
+  if (!id) {
+    return null;
+  }
+
+  // Capture the owner before asynchronous operations.
+  const ownerUid = currentUser.uid;
 
   const db = await openImageDB();
 
@@ -1793,16 +1806,49 @@ async function getImageBlob(id) {
       .get(id);
 
     request.onsuccess = () => {
-      resolve(request.result || null);
+
+      const record = request.result || null;
+
+      // Make sure the same user is still signed in.
+      if (
+        !currentUser ||
+        currentUser.uid !== ownerUid
+      ) {
+        resolve(null);
+        return;
+      }
+
+      // No matching record.
+      if (!record) {
+        resolve(null);
+        return;
+      }
+
+      // Verify image ownership.
+      if (record.uid !== ownerUid) {
+        resolve(null);
+        return;
+      }
+
+      resolve(record);
+
     };
 
     request.onerror = () => {
       reject(request.error);
     };
 
+    transaction.onabort = () => {
+      reject(
+        transaction.error ||
+        new Error("Image retrieval transaction aborted.")
+      );
+    };
+
   });
 
 }
+
 
 
 // DELETE IMAGE
