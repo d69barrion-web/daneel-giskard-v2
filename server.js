@@ -302,8 +302,8 @@ the user, including Filipino or Taglish.
 // library tools, and other capabilities later.
 
 
-const TOOL_DEFINITIONS = [
 
+const TOOL_DEFINITIONS = [
   {
     type: "function",
 
@@ -328,7 +328,7 @@ const TOOL_DEFINITIONS = [
     name: "generate_image",
 
     description:
-      "Generate a new image when the user clearly requests an original picture, drawing, illustration, or visual artwork. Do not use this tool when the user is merely discussing images, asking questions about image generation, or asking to analyze an uploaded image. Use the user's requested visual details as the prompt.",
+      "Generate a new original image when the user clearly requests an image, picture, drawing, illustration, or visual artwork. Use this function only when the user's actual intention is to create a new image. Do not use it when the user is merely discussing images, asking questions about image generation, or requesting analysis or description of an uploaded image. If the request is ambiguous, ask for clarification instead.",
 
     strict: true,
 
@@ -338,8 +338,9 @@ const TOOL_DEFINITIONS = [
       properties: {
         prompt: {
           type: "string",
+
           description:
-            "A detailed description of the image to generate, including the subject, visual style, composition, setting, and other details requested by the user."
+            "A detailed visual description of the image to generate. Include the subject, style, composition, setting, colors, mood, and other visual details relevant to the user's request."
         }
       },
 
@@ -347,9 +348,7 @@ const TOOL_DEFINITIONS = [
 
       additionalProperties: false
     }
-
   }
-
 ];
 
 
