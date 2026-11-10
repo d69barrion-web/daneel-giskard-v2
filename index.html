@@ -1849,7 +1849,254 @@ async function getImageBlob(id) {
 
 }
 
+function buildImageCatalog(options = {}) {
 
+  const currentOnly = options.currentOnly === true;
+  const activeId = activeConversationId;
+
+  const catalog = [];
+
+  if (!Array.isArray(conversations)) {
+    return catalog;
+  }
+
+  for (const conversation of conversations) {
+
+    if (
+      currentOnly &&
+      conversation.id !== activeId
+    ) {
+      continue;
+    }
+
+    if (!Array.isArray(conversation.messages)) {
+      continue;
+    }
+
+    conversation.messages.forEach((message, messageIndex) => {
+
+      if (
+        !Array.isArray(message.images) ||
+        message.images.length === 0
+      ) {
+        return;
+      }
+
+      message.images.forEach(image => {
+
+        if (!image || !image.id) {
+          return;
+        }
+
+        catalog.push({
+          imageId: image.id,
+          conversationId: conversation.id,
+          conversationTitle: conversation.title || "Untitled conversation",
+          messageIndex,
+          role: message.role || "unknown",
+          name: image.name || "Attached image",
+          mimeType: image.mimeType || "application/octet-stream",
+          size: Number(image.size) || 0,
+          prompt: image.prompt || "",
+          mode: image.mode || "unknown"
+        });
+
+      });
+
+    });
+
+  }
+
+  return catalog;
+
+}
+
+function installImageCatalogDebugPanel() {
+
+  if (document.getElementById("imageCatalogDebugButton")) {
+    return;
+  }
+
+  // Floating debug button
+  const button = document.createElement("button");
+  button.id = "imageCatalogDebugButton";
+  button.textContent = "Image Catalog";
+
+  button.style.cssText = `
+    position:fixed;
+    right:14px;
+    bottom:90px;
+    z-index:99998;
+    padding:11px 15px;
+    border:1px solid #777;
+    border-radius:25px;
+    background:#252525;
+    color:white;
+    font-size:13px;
+    cursor:pointer;
+    box-shadow:0 3px 12px rgba(0,0,0,.3);
+  `;
+
+  document.body.appendChild(button);
+
+  // Debug panel
+  const panel = document.createElement("div");
+  panel.id = "imageCatalogDebugPanel";
+
+  panel.style.cssText = `
+    display:none;
+    position:fixed;
+    inset:5%;
+    z-index:99999;
+    padding:16px;
+    overflow-y:auto;
+    background:#181818;
+    color:white;
+    border:1px solid #666;
+    border-radius:14px;
+    box-shadow:0 5px 25px rgba(0,0,0,.5);
+    font-family:Arial,sans-serif;
+  `;
+
+  panel.innerHTML = `
+    <div style="
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      margin-bottom:15px;
+    ">
+      <strong style="font-size:17px;">
+        Image Catalog Debug
+      </strong>
+
+      <button id="imageCatalogClose"
+        style="padding:7px 12px;">
+        Close
+      </button>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:15px;">
+      <button id="imageCatalogAll">All conversations</button>
+      <button id="imageCatalogCurrent">Current only</button>
+    </div>
+
+    <div id="imageCatalogSummary"
+      style="margin-bottom:12px;color:#aaa;">
+      Loading...
+    </div>
+
+    <div id="imageCatalogResults"></div>
+  `;
+
+  document.body.appendChild(panel);
+
+  let currentOnly = false;
+
+  function renderCatalog() {
+
+    const catalog = buildImageCatalog({
+      currentOnly
+    });
+
+    const summary =
+      document.getElementById("imageCatalogSummary");
+
+    const results =
+      document.getElementById("imageCatalogResults");
+
+    summary.textContent =
+      `${catalog.length} image(s) found`;
+
+    results.replaceChildren();
+
+    if (!catalog.length) {
+      results.textContent = "No images found.";
+      return;
+    }
+
+    catalog.forEach((item, index) => {
+
+      const card = document.createElement("div");
+
+      card.style.cssText = `
+        padding:12px;
+        margin-bottom:10px;
+        background:#292929;
+        border:1px solid #444;
+        border-radius:9px;
+        overflow-wrap:anywhere;
+      `;
+
+      const title = document.createElement("strong");
+      title.textContent =
+        `${index + 1}. ${item.name}`;
+
+      const details = document.createElement("div");
+
+      details.style.cssText = `
+        margin-top:7px;
+        font-size:12px;
+        line-height:1.7;
+        color:#ccc;
+      `;
+
+      details.textContent = [
+        `Image ID: ${item.imageId}`,
+        `Conversation: ${item.conversationTitle}`,
+        `Conversation ID: ${item.conversationId}`,
+        `Message index: ${item.messageIndex}`,
+        `Role: ${item.role}`,
+        `MIME type: ${item.mimeType}`,
+        `Size: ${item.size} bytes`,
+        `Mode: ${item.mode}`,
+        `Prompt: ${item.prompt || "(none)"}`
+      ].join("\n");
+
+      card.append(title, details);
+      results.appendChild(card);
+
+    });
+
+  }
+
+  button.addEventListener("click", () => {
+    panel.style.display = "block";
+    renderCatalog();
+  });
+
+  document.getElementById("imageCatalogClose")
+    .addEventListener("click", () => {
+      panel.style.display = "none";
+    });
+
+  document.getElementById("imageCatalogAll")
+    .addEventListener("click", () => {
+      currentOnly = false;
+      renderCatalog();
+    });
+
+  document.getElementById("imageCatalogCurrent")
+    .addEventListener("click", () => {
+      currentOnly = true;
+      renderCatalog();
+    });
+
+}
+
+// Install after the page is ready.
+if (document.readyState === "loading") {
+
+  document.addEventListener(
+    "DOMContentLoaded",
+    installImageCatalogDebugPanel
+  );
+
+} else {
+
+  installImageCatalogDebugPanel();
+
+}
 
 // DELETE IMAGE
 
