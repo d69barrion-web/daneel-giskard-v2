@@ -840,6 +840,38 @@ app.delete(
 // 9.4 IMAGE GENERATION ENDPOINT
 // ==========================================
 
+async function generateImage(prompt) {
+
+  const result = await openai.images.generate(
+    {
+      model: IMAGE_GENERATION_MODEL,
+      prompt,
+      n: 1
+    },
+    {
+      signal: AbortSignal.timeout(180000)
+    }
+  );
+
+  const imageBase64 =
+    result.data?.[0]?.b64_json;
+
+  if (
+    typeof imageBase64 !== "string" ||
+    !imageBase64
+  ) {
+    throw new Error(
+      "OpenAI returned no generated image."
+    );
+  }
+
+  return {
+    data: imageBase64,
+    mimeType: "image/png"
+  };
+
+}
+
 app.post(
   "/images/generate",
   requireAuth,
@@ -873,36 +905,12 @@ app.post(
         });
       }
 
-      const result = await openai.images.generate(
-        {
-          model: IMAGE_GENERATION_MODEL,
-          prompt,
-          n: 1
-        },
-        {
-          signal: AbortSignal.timeout(180000)
-        }
-      );
-
-      const imageBase64 =
-        result.data?.[0]?.b64_json;
-
-      if (
-        typeof imageBase64 !== "string" ||
-        !imageBase64
-      ) {
-        throw new Error(
-          "OpenAI returned no generated image."
-        );
-      }
+      const image = await generateImage(prompt);
 
       return res.json({
-        ok: true,
-        image: {
-          data: imageBase64,
-          mimeType: "image/png"
-        }
-      });
+  ok: true,
+  image
+});
 
     } catch (error) {
 
