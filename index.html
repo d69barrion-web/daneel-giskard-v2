@@ -1611,7 +1611,46 @@ function openImageDB() {
   return imageDBPromise;
 
 }
+// =====================================
+// 3.2 PERSISTENT BROWSER STORAGE
+// =====================================
 
+async function requestPersistentStorage() {
+
+  try {
+
+    if (!navigator.storage?.persist) {
+      console.log("Persistent storage is not supported.");
+      return false;
+    }
+
+    const alreadyPersistent =
+      await navigator.storage.persisted();
+
+    if (alreadyPersistent) {
+      console.log("Daneel storage is already protected.");
+      return true;
+    }
+
+    const granted =
+      await navigator.storage.persist();
+
+    console.log(
+      granted
+        ? "Daneel storage protection granted."
+        : "Daneel storage protection not granted."
+    );
+
+    return granted;
+
+  } catch (error) {
+
+    console.warn("Storage persistence request failed:", error);
+    return false;
+
+  }
+
+}
 
 async function generateImageAndSave(prompt) {
 
@@ -2209,7 +2248,10 @@ onAuthStateChanged(auth, async user => {
 
   if (user) {
 
+    await requestPersistentStorage();
+   
     $("signedOutBox").classList.add("hidden");
+    
     $("signedInBox").classList.remove("hidden");
 
     $("signedInEmail").textContent =
