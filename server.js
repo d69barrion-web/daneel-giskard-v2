@@ -260,7 +260,9 @@ the user, including Filipino or Taglish.
 // We will add project-file tools, learning
 // library tools, and other capabilities later.
 
+
 const TOOL_DEFINITIONS = [
+
   {
     type: "function",
 
@@ -277,8 +279,38 @@ const TOOL_DEFINITIONS = [
       required: [],
       additionalProperties: false
     }
+  },
+
+  {
+    type: "function",
+
+    name: "generate_image",
+
+    description:
+      "Generate a new image when the user clearly requests an original picture, drawing, illustration, or visual artwork. Do not use this tool when the user is merely discussing images, asking questions about image generation, or asking to analyze an uploaded image. Use the user's requested visual details as the prompt.",
+
+    strict: true,
+
+    parameters: {
+      type: "object",
+
+      properties: {
+        prompt: {
+          type: "string",
+          description:
+            "A detailed description of the image to generate, including the subject, visual style, composition, setting, and other details requested by the user."
+        }
+      },
+
+      required: ["prompt"],
+
+      additionalProperties: false
+    }
+
   }
+
 ];
+
 
 
 // ==========================================
@@ -288,19 +320,45 @@ const TOOL_DEFINITIONS = [
 async function executeTool(
   toolName,
   args,
-  user
+  user,
+  generatedImages = []
 ) {
   switch (toolName) {
-
     case "get_my_account_context": {
-
       return {
         uid: user.uid,
         email: user.email,
         emailVerified: user.emailVerified,
         displayName: user.displayName
       };
+    }
 
+    case "generate_image": {
+      const prompt =
+        typeof args.prompt === "string"
+          ? args.prompt.trim()
+          : "";
+
+      if (!prompt) {
+        throw new Error("An image prompt is required.");
+      }
+
+      if (prompt.length > 10000) {
+        throw new Error("Image prompt is too long.");
+      }
+
+      const image = await generateImage(prompt);
+
+      generatedImages.push({
+        data: image.data,
+        mimeType: image.mimeType,
+        prompt
+      });
+
+      return {
+        generated: true,
+        message: "Image generated successfully."
+      };
     }
 
     default:
@@ -376,7 +434,9 @@ const input = [
   );
 
   let totalToolCalls = 0;
-  let finished = false;
+let finished = false;
+
+const generatedImages = [];
 
   // AI may request tools multiple times.
   // The backend controls the maximum rounds.
@@ -439,10 +499,11 @@ const input = [
           }
 
           const result = await executeTool(
-            call.name,
-            args,
-            user
-          );
+              call.name,
+              args,
+              user,
+              generatedImages
+           );
 
           return {
             type: "function_call_output",
@@ -511,11 +572,12 @@ const input = [
     "Pasensya, wala akong maibigay na text response sa ngayon.";
 
   return {
-    message: finalMessage,
-    responseId: response.id,
-    usage: response.usage || null,
-    toolCalls: totalToolCalls
-  };
+  message: finalMessage,
+  responseId: response.id,
+  usage: response.usage || null,
+  toolCalls: totalToolCalls,
+  generatedImages
+};
 
 }
 
@@ -1034,20 +1096,16 @@ app.post(
 
       return res.json({
         ok: true,
-
         action: {
-          type: "chat"
+        type: "chat"
         },
-
-        chat: {
-          text: result.message
-        },
-
-        responseId: result.responseId,
-
-        usage: result.usage,
-
-        toolCalls: result.toolCalls
+      chat: {
+        text: result.message
+       },
+       responseId: result.responseId,
+       usage: result.usage,
+       toolCalls: result.toolCalls,
+       generatedImages: result.generatedImages || []
       });
 
     } catch (error) {
