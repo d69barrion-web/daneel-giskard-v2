@@ -3607,10 +3607,49 @@ if (imageCommand) {
 
     }
 
-    addMessage(
-      "assistant",
-      data.chat?.text || "No response received."
-    );
+// ======================================
+// SAVE GENERATED IMAGES TO INDEXEDDB
+// ======================================
+
+const generatedImageMetadata = [];
+
+for (const image of (data.generatedImages || [])) {
+
+  if (!image.data || !image.mimeType) {
+    continue;
+  }
+
+  const imageBlob = await fetch(
+    `data:${image.mimeType};base64,${image.data}`
+  ).then(response => response.blob());
+
+  const imageId = crypto.randomUUID();
+  const imageName = "Daneel generated image";
+
+  await saveImageBlob(imageId, imageBlob, {
+    name: imageName,
+    prompt: image.prompt || "",
+    mode: "generation"
+  });
+
+  generatedImageMetadata.push({
+    id: imageId,
+    name: imageName,
+    mimeType: imageBlob.type,
+    size: imageBlob.size
+  });
+
+}
+
+// ======================================
+// SAVE ASSISTANT MESSAGE
+// ======================================
+
+addMessage(
+  "assistant",
+  data.chat?.text || "No response received.",
+  generatedImageMetadata
+);
 
     // ======================================
     // CLEAR SELECTED IMAGES AFTER SUCCESS
