@@ -1911,13 +1911,13 @@ function buildImageCatalog(options = {}) {
 
 }
 
+
 function installImageCatalogDebugPanel() {
 
   if (document.getElementById("imageCatalogDebugButton")) {
     return;
   }
 
-  // Floating debug button
   const button = document.createElement("button");
   button.id = "imageCatalogDebugButton";
   button.textContent = "Image Catalog";
@@ -1939,7 +1939,6 @@ function installImageCatalogDebugPanel() {
 
   document.body.appendChild(button);
 
-  // Debug panel
   const panel = document.createElement("div");
   panel.id = "imageCatalogDebugPanel";
 
@@ -1992,12 +1991,11 @@ function installImageCatalogDebugPanel() {
   document.body.appendChild(panel);
 
   let currentOnly = false;
+  let checkRun = 0;
 
-  function renderCatalog() {
+  async function renderCatalog() {
 
-    const catalog = buildImageCatalog({
-      currentOnly
-    });
+    const thisRun = ++checkRun;
 
     const summary =
       document.getElementById("imageCatalogSummary");
@@ -2005,15 +2003,26 @@ function installImageCatalogDebugPanel() {
     const results =
       document.getElementById("imageCatalogResults");
 
+    const catalog = buildImageCatalog({
+      currentOnly
+    });
+
     summary.textContent =
-      `${catalog.length} image(s) found`;
+      `${catalog.length} image(s) found. Checking availability...`;
 
     results.replaceChildren();
 
     if (!catalog.length) {
+      summary.textContent = "0 images found.";
       results.textContent = "No images found.";
       return;
     }
+
+    let available = 0;
+    let missing = 0;
+    let errors = 0;
+
+    const cards = [];
 
     catalog.forEach((item, index) => {
 
@@ -2032,6 +2041,17 @@ function installImageCatalogDebugPanel() {
       title.textContent =
         `${index + 1}. ${item.name}`;
 
+      const status = document.createElement("div");
+
+      status.style.cssText = `
+        margin-top:8px;
+        font-size:13px;
+        font-weight:bold;
+        color:#aaa;
+      `;
+
+      status.textContent = "Checking...";
+
       const details = document.createElement("div");
 
       details.style.cssText = `
@@ -2039,6 +2059,7 @@ function installImageCatalogDebugPanel() {
         font-size:12px;
         line-height:1.7;
         color:#ccc;
+        white-space:pre-wrap;
       `;
 
       details.textContent = [
@@ -2053,10 +2074,82 @@ function installImageCatalogDebugPanel() {
         `Prompt: ${item.prompt || "(none)"}`
       ].join("\n");
 
-      card.append(title, details);
+      card.append(title, status, details);
       results.appendChild(card);
 
+      cards.push({
+        item,
+        status
+      });
+
     });
+
+    for (const entry of cards) {
+
+      if (
+        thisRun !== checkRun ||
+        panel.style.display === "none"
+      ) {
+        return;
+      }
+
+      try {
+
+        const record = await getImageBlob(
+          entry.item.imageId
+        );
+
+        if (
+          thisRun !== checkRun ||
+          panel.style.display === "none"
+        ) {
+          return;
+        }
+
+        if (
+          record &&
+          record.blob instanceof Blob &&
+          record.blob.size > 0
+        ) {
+
+          available++;
+
+          entry.status.textContent =
+            "✓ AVAILABLE — Image Blob found";
+
+          entry.status.style.color = "#70df91";
+
+        } else {
+
+          missing++;
+
+          entry.status.textContent =
+            "✗ MISSING / INACCESSIBLE";
+
+          entry.status.style.color = "#ffb45e";
+
+        }
+
+      } catch (error) {
+
+        errors++;
+
+        entry.status.textContent =
+          "! UNABLE TO CHECK";
+
+        entry.status.style.color = "#ff7777";
+
+      }
+
+      summary.textContent =
+        `Available: ${available} | Missing: ${missing} | Errors: ${errors} | Checked: ${available + missing + errors}/${catalog.length}`;
+
+    }
+
+    if (thisRun === checkRun) {
+      summary.textContent =
+        `Finished — Available: ${available} | Missing: ${missing} | Errors: ${errors} | Total: ${catalog.length}`;
+    }
 
   }
 
@@ -2067,6 +2160,7 @@ function installImageCatalogDebugPanel() {
 
   document.getElementById("imageCatalogClose")
     .addEventListener("click", () => {
+      checkRun++;
       panel.style.display = "none";
     });
 
@@ -2083,7 +2177,7 @@ function installImageCatalogDebugPanel() {
     });
 
 }
-
+      
 // Install after the page is ready.
 if (document.readyState === "loading") {
 
