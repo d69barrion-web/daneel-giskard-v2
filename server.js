@@ -1166,6 +1166,68 @@ app.post(
   }
 );
 
+app.post(
+  "/reference-image-test",
+  requireAuth,
+  upload.single("referenceImage"),
+  async (req, res) => {
+
+    try {
+
+      const file = req.file;
+
+      if (!file) {
+        return res.status(400).json({
+          ok: false,
+          error: "No reference image received."
+        });
+      }
+
+      if (
+        !Buffer.isBuffer(file.buffer) ||
+        file.buffer.length === 0
+      ) {
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid image data."
+        });
+      }
+
+      if (!file.mimetype.startsWith("image/")) {
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid image MIME type."
+        });
+      }
+
+      return res.json({
+        ok: true,
+        message: "Reference image received successfully.",
+        image: {
+          name: file.originalname,
+          mimeType: file.mimetype,
+          size: file.size,
+          bufferReceived: true
+        }
+      });
+
+    } catch (error) {
+
+      console.error(
+        "Reference image test failed:",
+        error.message
+      );
+
+      return res.status(500).json({
+        ok: false,
+        error: "Reference image test failed."
+      });
+
+    }
+
+  }
+);
+
 
 // ==========================================
 // 11. GENERAL ERROR HANDLER
