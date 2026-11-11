@@ -1849,6 +1849,46 @@ async function getImageBlob(id) {
 
 }
 
+async function retrieveImageReference(imageId) {
+
+  if (!imageId) {
+    throw new Error("Image ID is required.");
+  }
+
+  const record = await getImageBlob(imageId);
+
+  if (!record || !(record.blob instanceof Blob)) {
+    throw new Error(
+      "Image is missing or inaccessible."
+    );
+  }
+
+  if (record.blob.size === 0) {
+    throw new Error("Image Blob is empty.");
+  }
+
+  const mimeType =
+    record.mimeType ||
+    record.blob.type ||
+    "application/octet-stream";
+
+  if (!mimeType.startsWith("image/")) {
+    throw new Error("Retrieved file is not an image.");
+  }
+
+  const objectUrl = URL.createObjectURL(record.blob);
+
+  return {
+    imageId: record.id,
+    blob: record.blob,
+    mimeType,
+    size: record.blob.size,
+    name: record.name || "Reference image",
+    objectUrl
+  };
+
+}
+
 function buildImageCatalog(options = {}) {
 
   const currentOnly = options.currentOnly === true;
