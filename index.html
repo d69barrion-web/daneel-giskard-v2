@@ -2026,11 +2026,139 @@ function installImageCatalogDebugPanel() {
     </div>
 
     <div id="imageCatalogResults"></div>
+
+<hr style="margin:20px 0;border-color:#555;">
+
+<strong>Image Reference Retrieval Test</strong>
+
+<input
+  id="referenceImageId"
+  type="text"
+  value="1acbd2bc-9821-41c6-9a91-e798ac693b30"
+  style="
+    display:block;
+    box-sizing:border-box;
+    width:100%;
+    padding:10px;
+    margin-top:10px;
+    background:#292929;
+    color:white;
+    border:1px solid #666;
+    border-radius:7px;
+  "
+>
+
+<button
+  id="referenceRetrieveButton"
+  style="padding:10px 15px;margin-top:10px;"
+>
+  Retrieve Image
+</button>
+
+<div
+  id="referenceImageStatus"
+  style="margin-top:12px;color:#aaa;"
+>
+  Ready.
+</div>
+
+<img
+  id="referenceImagePreview"
+  alt="Retrieved reference image"
+  style="
+    display:none;
+    max-width:100%;
+    max-height:350px;
+    object-fit:contain;
+    margin-top:12px;
+    border:1px solid #555;
+    border-radius:8px;
+  "
+>
   `;
 
   document.body.appendChild(panel);
 
   let currentOnly = false;
+  
+let activeReferenceUrl = null;
+
+async function runReferenceRetrievalTest() {
+
+  const input =
+    document.getElementById("referenceImageId");
+
+  const status =
+    document.getElementById("referenceImageStatus");
+
+  const preview =
+    document.getElementById("referenceImagePreview");
+
+  const retrieveButton =
+    document.getElementById("referenceRetrieveButton");
+
+  const imageId = input.value.trim();
+
+  if (!imageId) {
+    status.textContent = "Please enter an image ID.";
+    return;
+  }
+
+  retrieveButton.disabled = true;
+  status.textContent = "Retrieving image...";
+  preview.style.display = "none";
+  preview.removeAttribute("src");
+
+  if (activeReferenceUrl) {
+    URL.revokeObjectURL(activeReferenceUrl);
+    activeReferenceUrl = null;
+  }
+
+  try {
+
+    const reference =
+      await retrieveImageReference(imageId);
+
+    activeReferenceUrl = reference.objectUrl;
+
+    preview.onload = () => {
+
+      status.textContent =
+        `SUCCESS — Image retrieved and displayed.\n` +
+        `Name: ${reference.name}\n` +
+        `MIME type: ${reference.mimeType}\n` +
+        `Size: ${reference.size} bytes`;
+
+      retrieveButton.disabled = false;
+
+    };
+
+    preview.onerror = () => {
+
+      status.textContent =
+        "ERROR — Blob retrieved, but image preview failed.";
+
+      retrieveButton.disabled = false;
+
+    };
+
+    preview.src = reference.objectUrl;
+    preview.style.display = "block";
+
+  } catch (error) {
+
+    status.textContent =
+      `RETRIEVAL FAILED: ${error.message}`;
+
+    retrieveButton.disabled = false;
+
+  }
+
+}
+
+document.getElementById("referenceRetrieveButton")
+  .addEventListener("click", runReferenceRetrievalTest);
+
   let checkRun = 0;
 
   async function renderCatalog() {
@@ -2199,10 +2327,24 @@ function installImageCatalogDebugPanel() {
   });
 
   document.getElementById("imageCatalogClose")
-    .addEventListener("click", () => {
-      checkRun++;
-      panel.style.display = "none";
-    });
+  .addEventListener("click", () => {
+
+    checkRun++;
+
+    panel.style.display = "none";
+
+    const preview =
+      document.getElementById("referenceImagePreview");
+
+    preview.removeAttribute("src");
+    preview.style.display = "none";
+
+    if (activeReferenceUrl) {
+      URL.revokeObjectURL(activeReferenceUrl);
+      activeReferenceUrl = null;
+    }
+
+  });
 
   document.getElementById("imageCatalogAll")
     .addEventListener("click", () => {
