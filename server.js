@@ -302,27 +302,30 @@ async function completePendingReferenceImage({
       throw new Error("Pending request not found.");
     }
 
-    const pending = snapshot.data();
+const pending = snapshot.data();
 
-    if (
-      pending.uid !== uid ||
-      pending.status !== "processing" ||
-      pending.used === true ||
-      pending.processingLeaseId !== leaseId
-    ) {
-      throw new Error("Invalid or expired processing lease.");
-    }
+const leaseExpiresAt =
+  pending.processingLeaseExpiresAt?.toMillis();
 
-    transaction.update(pendingRef, {
-      status: "used",
-      used: true,
-      completedAt: admin.firestore.Timestamp.now(),
-      processingLeaseId: null,
-      processingLeaseExpiresAt: null
-    });
-
-  });
+if (
+  pending.uid !== uid ||
+  pending.status !== "processing" ||
+  pending.used === true ||
+  pending.processingLeaseId !== leaseId ||
+  !leaseExpiresAt ||
+  leaseExpiresAt <= Date.now()
+) {
+  throw new Error("Invalid or expired processing lease.");
 }
+
+transaction.update(pendingRef, {
+  status: "used",
+  used: true,
+  completedAt: admin.firestore.Timestamp.now(),
+  processingLeaseId: null,
+  processingLeaseExpiresAt: null
+});
+
 
 async function releasePendingReferenceImage({
   pendingId,
