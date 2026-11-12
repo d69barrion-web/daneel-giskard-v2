@@ -384,6 +384,35 @@ const TOOL_DEFINITIONS = [
       additionalProperties: false
     }
   }
+
+  
+{
+  type: "function",
+
+  name: "request_reference_image",
+
+  description:
+    "Retrieve a previously uploaded or generated image from the user's conversation history. Use this when the user explicitly refers to an earlier image and wants to view, analyze, compare, or use it as a reference for editing. Select the exact image ID from the available image catalog. Never invent an image ID.",
+
+  strict: true,
+
+  parameters: {
+    type: "object",
+
+    properties: {
+      imageId: {
+        type: "string",
+        description:
+          "The exact imageId of the historical image selected from the available image catalog."
+      }
+    },
+
+    required: ["imageId"],
+
+    additionalProperties: false
+  }
+}
+
 ];
 
 
