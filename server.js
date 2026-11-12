@@ -383,7 +383,7 @@ const TOOL_DEFINITIONS = [
 
       additionalProperties: false
     }
-  }
+  },
 
   
 {
