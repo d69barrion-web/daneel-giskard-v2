@@ -611,19 +611,26 @@ const generatedImages = [];
       }
 
       return {
-        pendingReferenceImage: {
-          responseId: response.id,
-          callId: referenceCall.call_id,
-          image: {
-            imageId: selectedImage.imageId,
-            conversationId: selectedImage.conversationId,
-            conversationTitle: selectedImage.conversationTitle,
-            name: selectedImage.name,
-            mimeType: selectedImage.mimeType,
-            size: selectedImage.size
-          }
-        }
-      };
+        const pendingId = await createPendingReferenceImage({
+  uid: user.uid,
+  responseId: response.id,
+  callId: referenceCall.call_id,
+  image: selectedImage
+});
+
+return {
+  pendingReferenceImage: {
+    pendingId,
+    image: {
+      imageId: selectedImage.imageId,
+      conversationId: selectedImage.conversationId,
+      conversationTitle: selectedImage.conversationTitle,
+      name: selectedImage.name,
+      mimeType: selectedImage.mimeType,
+      size: selectedImage.size
+    }
+  }
+};
     }
 
 
