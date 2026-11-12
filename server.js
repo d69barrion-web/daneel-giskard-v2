@@ -250,17 +250,53 @@ async function claimPendingReferenceImage({
       );
     }
 
-    if (pending.status !== "pending") {
-  throw new Error("Reference image request is not available.");
+    // Allow a new claim only when:
+    // 1. The request is pending, or
+    // 2. The previous processing lease has expired.
+
+    if (pending.status === "processing") {
+
+      const leaseExpiresAt =
+        pending.processingLeaseExpiresAt?.toMillis();
+
+      if (
+        leaseExpiresAt &&
+        leaseExpiresAt > now
+      ) {
+        throw new Error(
+          "Reference image request is already processing."
+        );
+      }
+
+    } else if (pending.status !== "pending") {
+
+      throw new Error(
+        "Reference image request is not available."
+      );
+
     }
+
+    const leaseId = randomUUID();
+
+    const leaseExpiresAt =
+      admin.firestore.Timestamp.fromMillis(
+        now + (180 * 1000)
+      );
 
     transaction.update(pendingRef, {
       status: "processing",
       processingAt:
-        admin.firestore.Timestamp.fromMillis(now)
+        admin.firestore.Timestamp.fromMillis(now),
+      processingLeaseId: leaseId,
+      processingLeaseExpiresAt: leaseExpiresAt
     });
 
-    return pending;
+    return {
+      ...pending,
+      processingLeaseId: leaseId,
+      processingLeaseExpiresAt: leaseExpiresAt
+    };
+
   });
 }
 
