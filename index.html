@@ -4249,13 +4249,8 @@ if (imageCommand) {
       JSON.stringify(buildImageCatalog())
     );
     
-    selectedImages.forEach(image => {
-
-      formData.append(
-        "images",
-        image.file
-      );
-
+    imagesToSend.forEach(image => {
+    formData.append("images", image.file);
     });
 
     // ======================================
