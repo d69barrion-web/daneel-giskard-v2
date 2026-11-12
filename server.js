@@ -302,8 +302,13 @@ async function claimPendingReferenceImage({
 
 async function completePendingReferenceImage({
   pendingId,
-  uid
+  uid,
+  leaseId
 }) {
+  if (!pendingId || !uid || !leaseId) {
+    throw new Error("Incomplete completion request.");
+  }
+
   const db = getFirestoreDB();
 
   const pendingRef = db
@@ -311,6 +316,7 @@ async function completePendingReferenceImage({
     .doc(pendingId);
 
   await db.runTransaction(async transaction => {
+
     const snapshot = await transaction.get(pendingRef);
 
     if (!snapshot.exists) {
@@ -322,24 +328,32 @@ async function completePendingReferenceImage({
     if (
       pending.uid !== uid ||
       pending.status !== "processing" ||
-      pending.used === true
+      pending.used === true ||
+      pending.processingLeaseId !== leaseId
     ) {
-      throw new Error("Invalid pending request state.");
+      throw new Error("Invalid or expired processing lease.");
     }
 
     transaction.update(pendingRef, {
       status: "used",
       used: true,
-      completedAt:
-        admin.firestore.Timestamp.now()
+      completedAt: admin.firestore.Timestamp.now(),
+      processingLeaseId: null,
+      processingLeaseExpiresAt: null
     });
+
   });
 }
 
 async function releasePendingReferenceImage({
   pendingId,
-  uid
+  uid,
+  leaseId
 }) {
+  if (!pendingId || !uid || !leaseId) {
+    throw new Error("Incomplete release request.");
+  }
+
   const db = getFirestoreDB();
 
   const pendingRef = db
@@ -347,6 +361,7 @@ async function releasePendingReferenceImage({
     .doc(pendingId);
 
   await db.runTransaction(async transaction => {
+
     const snapshot = await transaction.get(pendingRef);
 
     if (!snapshot.exists) return;
@@ -356,25 +371,32 @@ async function releasePendingReferenceImage({
     if (
       pending.uid !== uid ||
       pending.status !== "processing" ||
-      pending.used === true
+      pending.used === true ||
+      pending.processingLeaseId !== leaseId
     ) {
       return;
     }
 
     if (
-      pending.expiresAt &&
+      !pending.expiresAt ||
       pending.expiresAt.toMillis() <= Date.now()
     ) {
       transaction.update(pendingRef, {
-        status: "expired"
+        status: "expired",
+        processingLeaseId: null,
+        processingLeaseExpiresAt: null
       });
+
       return;
     }
 
     transaction.update(pendingRef, {
       status: "pending",
-      processingAt: null
+      processingAt: null,
+      processingLeaseId: null,
+      processingLeaseExpiresAt: null
     });
+
   });
 }
 
