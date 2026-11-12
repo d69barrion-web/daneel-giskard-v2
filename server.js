@@ -418,7 +418,8 @@ async function runDaneel({
   user,
   message,
   history,
-  images = []
+  images = [],
+  imageCatalog = []
 }) {
 
   if (!openai) {
@@ -498,6 +499,68 @@ const generatedImages = [];
     const calls = response.output.filter(
       item => item.type === "function_call"
     );
+    
+    // Handle historical image retrieval separately.
+    // The browser must retrieve the actual image Blob.
+
+    const referenceCall = calls.find(
+      call => call.name === "request_reference_image"
+    );
+
+    if (referenceCall) {
+
+      if (calls.length !== 1) {
+        throw new Error(
+          "Historical image retrieval must run separately."
+        );
+      }
+
+      let args;
+
+      try {
+        args = JSON.parse(referenceCall.arguments);
+      } catch {
+        throw new Error(
+          "Invalid historical image request."
+        );
+      }
+
+      if (
+        !args ||
+        typeof args.imageId !== "string" ||
+        !args.imageId.trim()
+      ) {
+        throw new Error(
+          "A valid image ID is required."
+        );
+      }
+
+      const selectedImage = imageCatalog.find(
+        image => image.imageId === args.imageId
+      );
+
+      if (!selectedImage) {
+        throw new Error(
+          "The requested image is not in the available catalog."
+        );
+      }
+
+      return {
+        pendingReferenceImage: {
+          responseId: response.id,
+          callId: referenceCall.call_id,
+          image: {
+            imageId: selectedImage.imageId,
+            conversationId: selectedImage.conversationId,
+            conversationTitle: selectedImage.conversationTitle,
+            name: selectedImage.name,
+            mimeType: selectedImage.mimeType,
+            size: selectedImage.size
+          }
+        }
+      };
+    }
+
 
     // No more tool requests:
     // AI has completed its response.
@@ -1213,11 +1276,25 @@ app.post(
       });
 
       const result = await runDaneel({
-        user: req.user,
-        message: message.trim(),
-        history: cleanHistory,
-        images: req.files || []
-      });
+  user: req.user,
+  message: message.trim(),
+  history: cleanHistory,
+  images: req.files || [],
+  imageCatalog: cleanImageCatalog
+});
+
+      // Historical image retrieval handoff.
+
+      if (result.pendingReferenceImage) {
+        return res.json({
+          ok: true,
+          action: {
+            type: "retrieve_reference_image"
+          },
+          pendingReferenceImage:
+            result.pendingReferenceImage
+        });
+      }
 
       // Consistent JSON response for the frontend.
 
