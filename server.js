@@ -200,87 +200,67 @@ async function createPendingReferenceImage({
   return pendingRef.id;
 }
 
-async function claimPendingReferenceImage({
-  pendingId,
-  uid
-}) {
+async function claimPendingReferenceImage({ pendingId, uid }) {
   if (!pendingId || !uid) {
-    throw new Error(
-      "Pending request ID and user UID are required."
-    );
+    throw new Error("Pending request ID and user UID are required.");
   }
 
   const db = getFirestoreDB();
-
   const pendingRef = db
     .collection("pendingReferenceImages")
     .doc(pendingId);
 
   return await db.runTransaction(async transaction => {
-
     const snapshot = await transaction.get(pendingRef);
 
     if (!snapshot.exists) {
-      throw new Error(
-        "Pending reference image request not found."
-      );
+      throw new Error("Pending reference image request not found.");
     }
 
     const pending = snapshot.data();
     const now = Date.now();
 
     if (pending.uid !== uid) {
-      throw new Error(
-        "Unauthorized reference image request."
-      );
+      throw new Error("Unauthorized reference image request.");
     }
 
+    // Maximum lifetime of the pending request: 30 minutes.
     if (
       !pending.expiresAt ||
       pending.expiresAt.toMillis() <= now
     ) {
-      throw new Error(
-        "Reference image request has expired."
-      );
+      throw new Error("Reference image request has expired.");
     }
 
     if (pending.used === true) {
-      throw new Error(
-        "Reference image request was already used."
-      );
+      throw new Error("Reference image request was already used.");
     }
 
-    // Allow a new claim only when:
-    // 1. The request is pending, or
-    // 2. The previous processing lease has expired.
-
     if (pending.status === "processing") {
-
       const leaseExpiresAt =
         pending.processingLeaseExpiresAt?.toMillis();
 
-      if (
-        leaseExpiresAt &&
-        leaseExpiresAt > now
-      ) {
+      // Another worker still owns a valid processing lease.
+      if (leaseExpiresAt && leaseExpiresAt > now) {
         throw new Error(
           "Reference image request is already processing."
         );
       }
 
+      // Previous processing lease has expired.
+      // The request can now be reclaimed.
     } else if (pending.status !== "pending") {
-
       throw new Error(
         "Reference image request is not available."
       );
-
     }
 
     const leaseId = randomUUID();
 
+    // Processing lease: 20 minutes.
     const leaseExpiresAt =
       admin.firestore.Timestamp.fromMillis(
-        now + (180 * 1000)
+        now + (20 * 60 * 1000)
       );
 
     transaction.update(pendingRef, {
@@ -296,7 +276,6 @@ async function claimPendingReferenceImage({
       processingLeaseId: leaseId,
       processingLeaseExpiresAt: leaseExpiresAt
     };
-
   });
 }
 
