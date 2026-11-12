@@ -2054,14 +2054,25 @@ function installImageCatalogDebugPanel() {
 >
   Retrieve Image
 </button>
-
 <div
   id="referenceImageStatus"
   style="margin-top:12px;color:#aaa;"
 >
   Ready.
 </div>
+<button
+  id="referenceTransportButton"
+  style="padding:10px 15px;margin-top:10px;margin-left:6px;"
+>
+  Test Backend Transport
+</button>
 
+<div
+  id="referenceTransportStatus"
+  style="margin-top:12px;color:#aaa;white-space:pre-wrap;"
+>
+  Ready for transport test.
+</div>
 <img
   id="referenceImagePreview"
   alt="Retrieved reference image"
@@ -2158,6 +2169,99 @@ async function runReferenceRetrievalTest() {
 
 document.getElementById("referenceRetrieveButton")
   .addEventListener("click", runReferenceRetrievalTest);
+
+async function runReferenceTransportTest() {
+
+  const input =
+    document.getElementById("referenceImageId");
+
+  const status =
+    document.getElementById("referenceTransportStatus");
+
+  const button =
+    document.getElementById("referenceTransportButton");
+
+  const imageId = input.value.trim();
+
+  if (!imageId) {
+    status.textContent = "Please enter an image ID.";
+    return;
+  }
+
+  if (!currentUser) {
+    status.textContent = "ERROR: User is not signed in.";
+    return;
+  }
+
+  button.disabled = true;
+  status.textContent = "Retrieving image from IndexedDB...";
+
+  let reference = null;
+
+  try {
+
+    reference = await retrieveImageReference(imageId);
+
+    status.textContent =
+      "Image retrieved.\nPreparing upload to Render...";
+
+    const formData = new FormData();
+
+    formData.append(
+      "referenceImage",
+      reference.blob,
+      reference.name
+    );
+
+    const token = await currentUser.getIdToken();
+
+    status.textContent =
+      "Uploading reference image to Render...";
+
+    const response = await fetch(
+      API_BASE_URL + "/reference-image-test",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + token
+        },
+        body: formData
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      throw new Error(
+        data.error || "Backend transport failed."
+      );
+    }
+
+    status.textContent =
+      "SUCCESS — Backend received the image!\n\n" +
+      "Filename: " + data.image.name + "\n" +
+      "MIME type: " + data.image.mimeType + "\n" +
+      "Size: " + data.image.size + " bytes\n" +
+      "Buffer received: " + data.image.bufferReceived;
+
+  } catch (error) {
+
+    status.textContent =
+      "TRANSPORT FAILED:\n" + error.message;
+
+  } finally {
+
+    if (reference && reference.objectUrl) {
+      URL.revokeObjectURL(reference.objectUrl);
+    }
+
+    button.disabled = false;
+
+  }
+}
+
+document.getElementById("referenceTransportButton")
+  .addEventListener("click", runReferenceTransportTest);
 
   let checkRun = 0;
 
