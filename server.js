@@ -279,6 +279,7 @@ async function claimPendingReferenceImage({ pendingId, uid }) {
   });
 }
 
+
 async function completePendingReferenceImage({
   pendingId,
   uid,
@@ -295,37 +296,37 @@ async function completePendingReferenceImage({
     .doc(pendingId);
 
   await db.runTransaction(async transaction => {
-
     const snapshot = await transaction.get(pendingRef);
 
     if (!snapshot.exists) {
       throw new Error("Pending request not found.");
     }
 
-const pending = snapshot.data();
+    const pending = snapshot.data();
 
-const leaseExpiresAt =
-  pending.processingLeaseExpiresAt?.toMillis();
+    const leaseExpiresAt =
+      pending.processingLeaseExpiresAt?.toMillis();
 
-if (
-  pending.uid !== uid ||
-  pending.status !== "processing" ||
-  pending.used === true ||
-  pending.processingLeaseId !== leaseId ||
-  !leaseExpiresAt ||
-  leaseExpiresAt <= Date.now()
-) {
-  throw new Error("Invalid or expired processing lease.");
+    if (
+      pending.uid !== uid ||
+      pending.status !== "processing" ||
+      pending.used === true ||
+      pending.processingLeaseId !== leaseId ||
+      !leaseExpiresAt ||
+      leaseExpiresAt <= Date.now()
+    ) {
+      throw new Error("Invalid or expired processing lease.");
+    }
+
+    transaction.update(pendingRef, {
+      status: "used",
+      used: true,
+      completedAt: admin.firestore.Timestamp.now(),
+      processingLeaseId: null,
+      processingLeaseExpiresAt: null
+    });
+  });
 }
-
-transaction.update(pendingRef, {
-  status: "used",
-  used: true,
-  completedAt: admin.firestore.Timestamp.now(),
-  processingLeaseId: null,
-  processingLeaseExpiresAt: null
-});
-
 
 async function releasePendingReferenceImage({
   pendingId,
