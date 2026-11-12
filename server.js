@@ -350,6 +350,35 @@ const TOOL_DEFINITIONS = [
       additionalProperties: false
     }
   }
+
+  
+  {
+    type: "function",
+
+    name: "request_reference_image",
+
+    description:
+      "Request one specific historical image from the user's available image catalog when the actual image is needed for visual analysis or image editing. Use only an imageId found in the supplied catalog. Do not call this function when multiple images are equally plausible; ask the user to identify the correct image first.",
+
+    strict: true,
+
+    parameters: {
+      type: "object",
+
+      properties: {
+        imageId: {
+          type: "string",
+          description:
+            "The exact imageId of the selected historical image from the available catalog."
+        }
+      },
+
+      required: ["imageId"],
+
+      additionalProperties: false
+    }
+  }
+
 ];
 
 
