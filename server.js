@@ -968,6 +968,171 @@ return {
 
 }
 
+async function continueDaneelWithReference({
+  pending,
+  imageFile,
+  user
+}) {
+  if (!openai) {
+    throw new Error(
+      "OpenAI API key is not configured."
+    );
+  }
+
+  const imageOutput = {
+    type: "function_call_output",
+    call_id: pending.callId,
+    output: [
+      {
+        type: "input_text",
+        text: "Here is the requested historical reference image."
+      },
+      {
+        type: "input_image",
+        image_url:
+          `data:${imageFile.mimetype};base64,${imageFile.buffer.toString("base64")}`,
+        detail: "auto"
+      }
+    ]
+  };
+
+  let response = await openai.responses.create(
+    {
+      model: MODEL,
+      instructions: SYSTEM_PROMPT,
+      previous_response_id: pending.responseId,
+      input: [imageOutput],
+      tools: TOOL_DEFINITIONS,
+      tool_choice: "auto",
+      parallel_tool_calls: true,
+      max_output_tokens: 4000
+    },
+    {
+      signal: AbortSignal.timeout(120000)
+    }
+  );
+
+  let totalToolCalls = 0;
+  let finished = false;
+
+  const generatedImages = [];
+
+  for (
+    let round = 0;
+    round <= MAX_TOOL_ROUNDS;
+    round++
+  ) {
+    if (response.status !== "completed") {
+      throw new Error(
+        "OpenAI response did not complete: " +
+        response.status
+      );
+    }
+
+    const calls = response.output.filter(
+      item => item.type === "function_call"
+    );
+
+    if (calls.some(
+      call => call.name === "request_reference_image"
+    )) {
+      throw new Error(
+        "A second historical image request requires a separate retrieval."
+      );
+    }
+
+    if (calls.length === 0) {
+      finished = true;
+      break;
+    }
+
+    if (
+      round === MAX_TOOL_ROUNDS ||
+      totalToolCalls + calls.length > MAX_TOOL_CALLS
+    ) {
+      throw new Error(
+        "Daneel reached its tool execution limit."
+      );
+    }
+
+    const outputs = await Promise.all(
+      calls.map(async call => {
+        try {
+          const args = JSON.parse(call.arguments);
+
+          if (
+            typeof args !== "object" ||
+            args === null ||
+            Array.isArray(args)
+          ) {
+            throw new Error("Invalid tool arguments.");
+          }
+
+          const result = await executeTool(
+            call.name,
+            args,
+            user,
+            generatedImages
+          );
+
+          return {
+            type: "function_call_output",
+            call_id: call.call_id,
+            output: JSON.stringify({
+              ok: true,
+              result
+            })
+          };
+
+        } catch (error) {
+          return {
+            type: "function_call_output",
+            call_id: call.call_id,
+            output: JSON.stringify({
+              ok: false,
+              error: error.message
+            })
+          };
+        }
+      })
+    );
+
+    totalToolCalls += calls.length;
+
+    response = await openai.responses.create(
+      {
+        model: MODEL,
+        instructions: SYSTEM_PROMPT,
+        previous_response_id: response.id,
+        input: outputs,
+        tools: TOOL_DEFINITIONS,
+        tool_choice: "auto",
+        parallel_tool_calls: true,
+        max_output_tokens: 4000
+      },
+      {
+        signal: AbortSignal.timeout(120000)
+      }
+    );
+  }
+
+  if (!finished) {
+    throw new Error(
+      "Daneel could not finish within the tool limits."
+    );
+  }
+
+  return {
+    message:
+      response.output_text?.trim() ||
+      "Pasensya, wala akong maibigay na text response sa ngayon.",
+
+    responseId: response.id,
+    usage: response.usage || null,
+    toolCalls: totalToolCalls,
+    generatedImages
+  };
+}
 
 // ==========================================
 // 9. HEALTH CHECK
