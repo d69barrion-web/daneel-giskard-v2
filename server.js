@@ -1779,6 +1779,146 @@ app.post(
 );
 
 app.post(
+  "/continue-reference-image",
+  requireAuth,
+  upload.single("referenceImage"),
+  async (req, res) => {
+
+    let pendingId = null;
+    let claimed = false;
+    let continuationSucceeded = false;
+
+    try {
+
+      const uid = req.user.uid;
+      pendingId = req.body?.pendingId;
+
+      // Validate pending ID.
+      if (
+        typeof pendingId !== "string" ||
+        !/^[A-Za-z0-9]{1,128}$/.test(pendingId)
+      ) {
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid pending request ID."
+        });
+      }
+
+      // Validate uploaded image.
+      const imageFile = req.file;
+
+      if (
+        !imageFile ||
+        !Buffer.isBuffer(imageFile.buffer) ||
+        imageFile.buffer.length === 0
+      ) {
+        return res.status(400).json({
+          ok: false,
+          error: "Reference image is missing."
+        });
+      }
+
+      if (
+        !imageFile.mimetype ||
+        !imageFile.mimetype.startsWith("image/")
+      ) {
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid reference image type."
+        });
+      }
+
+      // Atomically claim the pending request.
+      const pending = await claimPendingReferenceImage({
+        pendingId,
+        uid
+      });
+
+      claimed = true;
+
+      // Verify that the image belongs to this user.
+      await verifyReferenceImageOwnership({
+        uid,
+        conversationId: pending.conversationId,
+        imageId: pending.imageId
+      });
+
+      // Verify that the pending request is complete.
+      if (
+        !pending.responseId ||
+        !pending.callId ||
+        !pending.imageId ||
+        !pending.conversationId
+      ) {
+        throw new Error(
+          "Incomplete pending reference image data."
+        );
+      }
+
+      // Continue the original OpenAI response.
+      const result = await continueDaneelWithReference({
+        pending,
+        imageFile,
+        user: req.user
+      });
+
+      continuationSucceeded = true;
+
+      // Mark the pending request as permanently used.
+      await completePendingReferenceImage({
+        pendingId,
+        uid
+      });
+
+      return res.json({
+        ok: true,
+        action: {
+          type: "chat"
+        },
+        chat: {
+          text: result.message
+        },
+        responseId: result.responseId,
+        usage: result.usage,
+        toolCalls: result.toolCalls,
+        generatedImages: result.generatedImages || []
+      });
+
+    } catch (error) {
+
+      console.error(
+        "Continue reference image failed:",
+        error.message
+      );
+
+      // Release the request only if OpenAI continuation
+      // did not successfully complete.
+      if (claimed && !continuationSucceeded) {
+        try {
+          await releasePendingReferenceImage({
+            pendingId,
+            uid: req.user.uid
+          });
+        } catch (releaseError) {
+          console.error(
+            "Pending image release failed:",
+            releaseError.message
+          );
+        }
+      }
+
+      return res.status(500).json({
+        ok: false,
+        error:
+          "Unable to continue the reference image request."
+      });
+
+    }
+
+  }
+);
+
+app.post(
   "/reference-image-test",
   requireAuth,
   upload.single("referenceImage"),
