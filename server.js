@@ -610,8 +610,8 @@ const generatedImages = [];
         );
       }
 
-      return {
-        const pendingId = await createPendingReferenceImage({
+      
+const pendingId = await createPendingReferenceImage({
   uid: user.uid,
   responseId: response.id,
   callId: referenceCall.call_id,
@@ -631,7 +631,7 @@ return {
     }
   }
 };
-    }
+
 
 
     // No more tool requests:
