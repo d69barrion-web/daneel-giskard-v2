@@ -177,7 +177,7 @@ async function createPendingReferenceImage({
     .doc();
 
   const now = Date.now();
-  const expiresAt = now + (5 * 60 * 1000);
+  const expiresAt = now + (30 * 60 * 1000);
 
   await pendingRef.set({
     uid,
