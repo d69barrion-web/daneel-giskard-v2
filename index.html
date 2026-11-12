@@ -4243,7 +4243,12 @@ if (imageCommand) {
       "history",
       JSON.stringify(previousMessages)
     );
-
+    
+    formData.append(
+      "imageCatalog",
+      JSON.stringify(buildImageCatalog())
+    );
+    
     selectedImages.forEach(image => {
 
       formData.append(
