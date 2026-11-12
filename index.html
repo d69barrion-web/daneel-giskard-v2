@@ -4281,12 +4281,80 @@ if (imageCommand) {
     }
 
 // ======================================
+// RETRIEVE HISTORICAL REFERENCE IMAGE
+// ======================================
+
+let finalData = data;
+
+if (data.action?.type === "retrieve_reference_image") {
+
+  const pending = data.pendingReferenceImage;
+
+  if (!pending?.pendingId || !pending?.image?.imageId) {
+    throw new Error("Invalid reference image request.");
+  }
+
+  let reference = null;
+
+  try {
+
+    showStatus("Retrieving historical image...");
+
+    reference = await retrieveImageReference(
+      pending.image.imageId
+    );
+
+    const referenceForm = new FormData();
+
+    referenceForm.append("pendingId", pending.pendingId);
+
+    referenceForm.append(
+      "referenceImage",
+      reference.blob,
+      reference.name || "reference-image"
+    );
+
+    showStatus("Daneel is examining the reference image...");
+
+    const continuationResponse = await fetch(
+      API_BASE_URL + "/continue-reference-image",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + token
+        },
+        body: referenceForm
+      }
+    );
+
+    const continuationData = await continuationResponse.json();
+
+    if (!continuationResponse.ok || !continuationData.ok) {
+      throw new Error(
+        continuationData.error ||
+        "Reference image continuation failed."
+      );
+    }
+
+    finalData = continuationData;
+
+  } finally {
+
+    if (reference?.objectUrl) {
+      URL.revokeObjectURL(reference.objectUrl);
+    }
+
+  }
+
+}
+
+// ======================================
 // SAVE GENERATED IMAGES TO INDEXEDDB
 // ======================================
 
 const generatedImageMetadata = [];
 
-for (const image of (data.generatedImages || [])) {
+for (const image of (finalData.generatedImages || [])) {
 
   if (!image.data || !image.mimeType) {
     continue;
@@ -4320,7 +4388,7 @@ for (const image of (data.generatedImages || [])) {
 
 addMessage(
   "assistant",
-  data.chat?.text || "No response received.",
+  finalData.chat?.text || "No response received.",
   generatedImageMetadata
 );
 
