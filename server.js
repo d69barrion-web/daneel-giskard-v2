@@ -146,6 +146,11 @@ function getFirebaseAdmin() {
   });
 }
 
+function getFirestoreDB() {
+  const app = getFirebaseAdmin();
+  return admin.firestore(app);
+}
+
 
 // Firestore access helper.
 // Gagamitin natin ito kapag naitatag na
