@@ -4,6 +4,7 @@ import cors from "cors";
 import OpenAI from "openai";
 import admin from "firebase-admin";
 import multer from "multer";
+import { randomUUID } from "node:crypto";
 
 // ==========================================
 // 1. BASIC CONFIGURATION
