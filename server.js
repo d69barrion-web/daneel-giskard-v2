@@ -191,8 +191,9 @@ async function createPendingReferenceImage({
 
     expiresAt:
       admin.firestore.Timestamp.fromMillis(expiresAt),
-
-    used: false
+    
+      status: "pending",
+      used: false
   });
 
   return pendingRef.id;
