@@ -151,7 +151,6 @@ function getFirestoreDB() {
   return admin.firestore(app);
 }
 
-
 async function createPendingReferenceImage({
   uid,
   responseId,
@@ -262,6 +261,84 @@ async function claimPendingReferenceImage({
     });
 
     return pending;
+  });
+}
+
+async function completePendingReferenceImage({
+  pendingId,
+  uid
+}) {
+  const db = getFirestoreDB();
+
+  const pendingRef = db
+    .collection("pendingReferenceImages")
+    .doc(pendingId);
+
+  await db.runTransaction(async transaction => {
+    const snapshot = await transaction.get(pendingRef);
+
+    if (!snapshot.exists) {
+      throw new Error("Pending request not found.");
+    }
+
+    const pending = snapshot.data();
+
+    if (
+      pending.uid !== uid ||
+      pending.status !== "processing" ||
+      pending.used === true
+    ) {
+      throw new Error("Invalid pending request state.");
+    }
+
+    transaction.update(pendingRef, {
+      status: "used",
+      used: true,
+      completedAt:
+        admin.firestore.Timestamp.now()
+    });
+  });
+}
+
+async function releasePendingReferenceImage({
+  pendingId,
+  uid
+}) {
+  const db = getFirestoreDB();
+
+  const pendingRef = db
+    .collection("pendingReferenceImages")
+    .doc(pendingId);
+
+  await db.runTransaction(async transaction => {
+    const snapshot = await transaction.get(pendingRef);
+
+    if (!snapshot.exists) return;
+
+    const pending = snapshot.data();
+
+    if (
+      pending.uid !== uid ||
+      pending.status !== "processing" ||
+      pending.used === true
+    ) {
+      return;
+    }
+
+    if (
+      pending.expiresAt &&
+      pending.expiresAt.toMillis() <= Date.now()
+    ) {
+      transaction.update(pendingRef, {
+        status: "expired"
+      });
+      return;
+    }
+
+    transaction.update(pendingRef, {
+      status: "pending",
+      processingAt: null
+    });
   });
 }
 
