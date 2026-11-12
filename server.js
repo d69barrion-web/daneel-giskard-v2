@@ -1842,9 +1842,10 @@ app.post(
   async (req, res) => {
 
     let pendingId = null;
+    let leaseId = null;
     let claimed = false;
     let continuationSucceeded = false;
-
+    
     try {
 
       const uid = req.user.uid;
@@ -1893,6 +1894,12 @@ app.post(
 
       claimed = true;
 
+      leaseId = pending.processingLeaseId;
+
+      if (!leaseId) {
+        throw new Error("Processing lease ID is missing.");
+      }
+
       // Verify that the image belongs to this user.
       await verifyReferenceImageOwnership({
         uid,
@@ -1923,8 +1930,9 @@ app.post(
 
       // Mark the pending request as permanently used.
       await completePendingReferenceImage({
-        pendingId,
-        uid
+       pendingId,
+       uid,
+       leaseId
       });
 
       return res.json({
@@ -1954,8 +1962,10 @@ app.post(
         try {
           await releasePendingReferenceImage({
             pendingId,
-            uid: req.user.uid
-          });
+            uid: req.user.uid,
+            leaseId
+        });
+          
         } catch (releaseError) {
           console.error(
             "Pending image release failed:",
