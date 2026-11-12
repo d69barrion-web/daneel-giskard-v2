@@ -151,6 +151,37 @@ function getFirestoreDB() {
   return admin.firestore(app);
 }
 
+async function createPendingReferenceImage({
+  uid,
+  responseId,
+  callId,
+  image
+}) {
+  if (!uid || !responseId || !callId || !image?.imageId) {
+    throw new Error("Incomplete reference image request.");
+  }
+
+  const db = getFirestoreDB();
+  const pendingRef = db
+    .collection("pendingReferenceImages")
+    .doc();
+
+  const now = Date.now();
+  const expiresAt = now + (5 * 60 * 1000);
+
+  await pendingRef.set({
+    uid,
+    responseId,
+    callId,
+    imageId: image.imageId,
+    createdAt: admin.firestore.Timestamp.fromMillis(now),
+    expiresAt: admin.firestore.Timestamp.fromMillis(expiresAt),
+    used: false
+  });
+
+  return pendingRef.id;
+}
+
 
 // Firestore access helper.
 // Gagamitin natin ito kapag naitatag na
