@@ -146,7 +146,41 @@ function getFirebaseAdmin() {
   });
 }
 
+function getFirestoreDB() {
+  const app = getFirebaseAdmin();
+  return admin.firestore(app);
+}
 
+async function createPendingReferenceImage({
+  uid,
+  responseId,
+  callId,
+  image
+}) {
+  if (!uid || !responseId || !callId || !image?.imageId) {
+    throw new Error("Incomplete reference image request.");
+  }
+
+  const db = getFirestoreDB();
+  const pendingRef = db
+    .collection("pendingReferenceImages")
+    .doc();
+
+  const now = Date.now();
+  const expiresAt = now + (5 * 60 * 1000);
+
+  await pendingRef.set({
+    uid,
+    responseId,
+    callId,
+    imageId: image.imageId,
+    createdAt: admin.firestore.Timestamp.fromMillis(now),
+    expiresAt: admin.firestore.Timestamp.fromMillis(expiresAt),
+    used: false
+  });
+
+  return pendingRef.id;
+}
 // Firestore access helper.
 // Gagamitin natin ito kapag naitatag na
 // ang database collections at data structure.
@@ -545,20 +579,26 @@ const generatedImages = [];
         );
       }
 
-      return {
-        pendingReferenceImage: {
-          responseId: response.id,
-          callId: referenceCall.call_id,
-          image: {
-            imageId: selectedImage.imageId,
-            conversationId: selectedImage.conversationId,
-            conversationTitle: selectedImage.conversationTitle,
-            name: selectedImage.name,
-            mimeType: selectedImage.mimeType,
-            size: selectedImage.size
-          }
-        }
-      };
+      const pendingId = await createPendingReferenceImage({
+  uid: user.uid,
+  responseId: response.id,
+  callId: referenceCall.call_id,
+  image: selectedImage
+});
+
+return {
+  pendingReferenceImage: {
+    pendingId,
+    image: {
+      imageId: selectedImage.imageId,
+      conversationId: selectedImage.conversationId,
+      conversationTitle: selectedImage.conversationTitle,
+      name: selectedImage.name,
+      mimeType: selectedImage.mimeType,
+      size: selectedImage.size
+    }
+  }
+};
     }
 
 
