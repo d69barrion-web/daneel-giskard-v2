@@ -1080,10 +1080,96 @@ app.post(
       }
 
       
+      // Parse historical image catalog.
+
+      let imageCatalog = req.body?.imageCatalog ?? [];
+
+      if (typeof imageCatalog === "string") {
+        try {
+          imageCatalog = JSON.parse(imageCatalog);
+        } catch {
+          return res.status(400).json({
+            ok: false,
+            error: "Invalid image catalog format."
+          });
+        }
+      }
+
+      if (!Array.isArray(imageCatalog)) {
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid image catalog."
+        });
+      }
+
+      if (imageCatalog.length > 100) {
+        return res.status(400).json({
+          ok: false,
+          error: "Too many images in catalog."
+        });
+      }
+
+      const cleanImageCatalog = [];
+
+      for (const image of imageCatalog) {
+
+        if (
+          !image ||
+          typeof image !== "object" ||
+          typeof image.imageId !== "string" ||
+          !image.imageId.trim() ||
+          typeof image.conversationId !== "string" ||
+          typeof image.role !== "string" ||
+          !["user", "assistant", "unknown"].includes(image.role) ||
+          !Number.isInteger(image.messageIndex) ||
+          image.messageIndex < 0 ||
+          typeof image.mimeType !== "string" ||
+          !image.mimeType.startsWith("image/") ||
+          !Number.isFinite(image.size) ||
+          image.size < 0
+        ) {
+          return res.status(400).json({
+            ok: false,
+            error: "Invalid image catalog entry."
+          });
+        }
+
+        cleanImageCatalog.push({
+          imageId: image.imageId.slice(0, 200),
+          conversationId: image.conversationId.slice(0, 200),
+          conversationTitle:
+            typeof image.conversationTitle === "string"
+              ? image.conversationTitle.slice(0, 200)
+              : "Untitled conversation",
+          messageIndex: image.messageIndex,
+          role: image.role,
+          name:
+            typeof image.name === "string"
+              ? image.name.slice(0, 200)
+              : "Attached image",
+          mimeType: image.mimeType.slice(0, 100),
+          size: image.size,
+          prompt:
+            typeof image.prompt === "string"
+              ? image.prompt.slice(0, 2000)
+              : "",
+          mode:
+            typeof image.mode === "string"
+              ? image.mode.slice(0, 50)
+              : "unknown"
+        });
+      }
+
+      console.log(
+        "Historical image catalog received:",
+        cleanImageCatalog.length
+      );
+
 
       if (
         message.length > MAX_MESSAGE_CHARS
       ) {
+        
         return res.status(413).json({
           ok: false,
           error: "Message exceeds the configured limit."
