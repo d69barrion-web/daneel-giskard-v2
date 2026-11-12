@@ -44,14 +44,15 @@ const openai = process.env.OPENAI_API_KEY
 // IMAGE UPLOAD CONFIGURATION
 // ==========================================
 
+
 const upload = multer({
   storage: multer.memoryStorage(),
 
   limits: {
     fileSize: 10 * 1024 * 1024,
     files: 5,
-    fields: 2,
-    parts: 7,
+    fields: 3,
+    parts: 8,
     fieldSize: 2 * 1024 * 1024
   },
 
