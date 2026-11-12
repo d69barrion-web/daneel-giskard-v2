@@ -222,6 +222,58 @@ function getUserConversationsCollection(uid) {
 
 }
 
+async function verifyReferenceImageOwnership({
+  uid,
+  conversationId,
+  imageId
+}) {
+  if (
+    !uid ||
+    !conversationId ||
+    !imageId
+  ) {
+    throw new Error(
+      "Incomplete image ownership verification."
+    );
+  }
+
+  const conversationRef =
+    getUserConversationsCollection(uid)
+      .doc(conversationId);
+
+  const snapshot = await conversationRef.get();
+
+  if (!snapshot.exists) {
+    throw new Error(
+      "Reference image conversation not found."
+    );
+  }
+
+  const conversation = snapshot.data();
+
+  if (!Array.isArray(conversation.messages)) {
+    throw new Error(
+      "Conversation messages are unavailable."
+    );
+  }
+
+  const imageExists = conversation.messages.some(
+    message =>
+      Array.isArray(message.images) &&
+      message.images.some(
+        image => image && image.id === imageId
+      )
+  );
+
+  if (!imageExists) {
+    throw new Error(
+      "Reference image does not belong to this user."
+    );
+  }
+
+  return true;
+}
+
 // ==========================================
 // 4. FIREBASE AUTHENTICATION MIDDLEWARE
 // ==========================================
