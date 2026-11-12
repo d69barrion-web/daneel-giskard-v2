@@ -249,10 +249,9 @@ async function claimPendingReferenceImage({
       );
     }
 
-    if (pending.status === "processing") {
-      throw new Error(
-        "Reference image request is already processing."
-      );
+    if (pending.status !== "pending") {
+  throw new Error("Reference image request is not available.");
+}
     }
 
     transaction.update(pendingRef, {
