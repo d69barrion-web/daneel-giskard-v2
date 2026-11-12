@@ -199,6 +199,72 @@ async function createPendingReferenceImage({
   return pendingRef.id;
 }
 
+async function claimPendingReferenceImage({
+  pendingId,
+  uid
+}) {
+  if (!pendingId || !uid) {
+    throw new Error(
+      "Pending request ID and user UID are required."
+    );
+  }
+
+  const db = getFirestoreDB();
+
+  const pendingRef = db
+    .collection("pendingReferenceImages")
+    .doc(pendingId);
+
+  return await db.runTransaction(async transaction => {
+
+    const snapshot = await transaction.get(pendingRef);
+
+    if (!snapshot.exists) {
+      throw new Error(
+        "Pending reference image request not found."
+      );
+    }
+
+    const pending = snapshot.data();
+    const now = Date.now();
+
+    if (pending.uid !== uid) {
+      throw new Error(
+        "Unauthorized reference image request."
+      );
+    }
+
+    if (
+      !pending.expiresAt ||
+      pending.expiresAt.toMillis() <= now
+    ) {
+      throw new Error(
+        "Reference image request has expired."
+      );
+    }
+
+    if (pending.used === true) {
+      throw new Error(
+        "Reference image request was already used."
+      );
+    }
+
+    if (pending.status === "processing") {
+      throw new Error(
+        "Reference image request is already processing."
+      );
+    }
+
+    transaction.update(pendingRef, {
+      status: "processing",
+      processingAt:
+        admin.firestore.Timestamp.fromMillis(now)
+    });
+
+    return pending;
+  });
+}
+
 // Firestore access helper.
 // Gagamitin natin ito kapag naitatag na
 // ang database collections at data structure.
