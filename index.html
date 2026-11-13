@@ -1304,6 +1304,26 @@ async function firestoreRequest(
   return data;
 
 }
+  
+// ==========================================
+// LOAD CONVERSATIONS FROM FIRESTORE
+// ==========================================
+
+async function loadFirestoreConversations() {
+
+  const data = await firestoreRequest(
+    "/conversations"
+  );
+
+  if (!Array.isArray(data.conversations)) {
+    throw new Error(
+      "Invalid conversations data received."
+    );
+  }
+
+  return data.conversations;
+
+}
 // ==========================================
 // 2. FIREBASE INITIALIZATION
 // ==========================================
