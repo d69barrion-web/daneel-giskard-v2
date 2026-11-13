@@ -3174,17 +3174,26 @@ function renderImagePreviews() {
 // Receive selected images
 imageFileInput.addEventListener("change", () => {
 
-  // Release previous preview URLs
-  selectedImages.forEach(image => {
-    URL.revokeObjectURL(image.previewUrl);
-  });
+  const newFiles = Array.from(imageFileInput.files)
+    .filter(file => file.type.startsWith("image/"));
 
-  selectedImages = Array.from(imageFileInput.files)
-    .filter(file => file.type.startsWith("image/"))
-    .map(file => ({
+  newFiles.forEach(file => {
+
+    // Avoid adding the exact same file twice
+    const alreadySelected = selectedImages.some(image =>
+      image.file.name === file.name &&
+      image.file.size === file.size &&
+      image.file.lastModified === file.lastModified
+    );
+
+    if (alreadySelected) return;
+
+    selectedImages.push({
       file,
       previewUrl: URL.createObjectURL(file)
-    }));
+    });
+
+  });
 
   renderImagePreviews();
 
