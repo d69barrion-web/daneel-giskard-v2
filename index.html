@@ -1581,6 +1581,10 @@ function renderMessages() {
       `;
 
     }).join("");
+  // Apply syntax highlighting to code blocks
+$("messages").querySelectorAll("pre code").forEach(block => {
+  hljs.highlightElement(block);
+});
 
   scrollToBottom();
 
