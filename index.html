@@ -187,7 +187,7 @@ button {
   line-height:1.7;
   font-size:15px;
   overflow-wrap:anywhere;
-  white-space:pre-wrap;
+  white-space:normal;
 }
 
 .user .bubble {
@@ -637,7 +637,203 @@ body.light .user .bubble {
     max-height:calc(100dvh - 16px);
   }
 }
+  
+/* Markdown spacing */
+.bubble p {
+  margin: 0 0 0.45em;
+  line-height: 1.55;
+}
+
+.bubble p:last-child {
+  margin-bottom: 0;
+}
+
+.bubble h1,
+.bubble h2,
+.bubble h3,
+.bubble h4 {
+  margin: 0.9em 0 0.4em;
+  line-height: 1.3;
+}
+
+.bubble ul,
+.bubble ol {
+  margin: 0.35em 0 0.65em;
+  padding-left: 1.5em;
+}
+
+.bubble li {
+  margin: 0.2em 0;
+}
+
+/* Markdown code blocks */
+
+.bubble pre {
+  margin: 12px 0;
+  padding: 14px;
+  border-radius: 10px;
+  background: #171b26;
+  color: #e6edf3;
+  overflow-x: auto;
+  max-width: 100%;
+  white-space: pre;
+  line-height: 1.5;
+  font-size: 13px;
+}
+
+.bubble pre code {
+  display: block;
+  font-family: Consolas, Monaco, monospace;
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.bubble :not(pre) > code {
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--panel2);
+  font-family: Consolas, Monaco, monospace;
+  font-size: 0.9em;
+}
+
+.bubble pre:last-child {
+  margin-bottom: 0;
+}
+
+.code-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 7px 10px;
+  background: #252b38;
+  border-radius: 9px 9px 0 0;
+}
+
+.code-toolbar + pre {
+  margin-top: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.code-action-btn {
+  border: 1px solid #596273;
+  background: transparent;
+  color: #e6edf3;
+  padding: 5px 11px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.code-action-btn:hover {
+  background: #3a4353;
+}
+
+/* RICH TEXT COMPOSER */
+
+.composer-editor-wrap {
+  max-width: 900px;
+  margin: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 9px 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+}
+
+.format-toolbar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--border);
+}
+
+.format-toolbar button {
+  min-width: 34px;
+  height: 32px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.format-toolbar button:hover {
+  background: var(--panel2);
+}
+
+.rich-editor {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  max-height: 160px;
+  overflow-y: auto;
+  outline: none;
+  padding: 10px 4px;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.rich-editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.rich-editor h2 {
+  font-size: 1.3em;
+  margin: 8px 0;
+}
+
+.rich-editor pre {
+  padding: 10px;
+  background: var(--panel2);
+  border-radius: 8px;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.rich-editor ul,
+.rich-editor ol {
+  padding-left: 24px;
+}
+
+.rich-editor code {
+  font-family: monospace;
+  background: var(--panel2);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.composer-editor-wrap .send-btn {
+  flex-shrink: 0;
+}
+
+#messageInput {
+  display: none;
+}
+
 </style>
+  
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css"
+>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+
 </head>
 
 <body>
@@ -697,36 +893,71 @@ body.light .user .bubble {
   </main>
 
 
-  <!-- COMPOSER -->
+  
+<!-- COMPOSER -->
 
-  <footer class="composer-wrap">
+<footer class="composer-wrap">
 
-    <div class="composer">
+  <div class="composer-editor-wrap">
 
-      <textarea
-        id="messageInput"
-        rows="1"
-        placeholder="Message Daneel..."
-        aria-label="Message Daneel">
-      </textarea>
+    <div class="format-toolbar">
 
-      <button class="send-btn"
-        id="sendButton"
-        aria-label="Send message">
-        ➤
+      <button type="button" data-command="bold" title="Bold">
+        <b>B</b>
+      </button>
+
+      <button type="button" data-command="italic" title="Italic">
+        <i>I</i>
+      </button>
+
+      <button type="button" data-command="formatBlock" data-value="H2" title="Heading">
+        H
+      </button>
+
+      <button type="button" data-command="insertUnorderedList" title="Bullet list">
+        •≡
+      </button>
+
+      <button type="button" data-command="insertOrderedList" title="Numbered list">
+        1.
+      </button>
+
+      <button type="button" data-command="formatBlock" data-value="PRE" title="Code block">
+        &lt;/&gt;
       </button>
 
     </div>
 
-    <div class="composer-note">
-      Daneel Giskard v2
+    <div
+      id="richMessageInput"
+      class="rich-editor"
+      contenteditable="true"
+      data-placeholder="Message Daneel..."
+      aria-label="Message Daneel"
+      role="textbox"
+      aria-multiline="true">
     </div>
 
-    <div class="status" id="status"></div>
+    <textarea id="messageInput" hidden></textarea>
 
-  </footer>
+    <button
+      class="send-btn"
+      id="sendButton"
+      aria-label="Send message">
+      ➤
+    </button>
 
+  </div>
+
+  <div class="composer-note">
+    Daneel Giskard v2
+  </div>
+
+  <div class="status" id="status"></div>
+
+</footer>
 </div>
+
 
 
 <!-- CONVERSATION DRAWER -->
@@ -916,13 +1147,21 @@ import {
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 
+import { marked } from "https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js";
+
+import DOMPurify from "https://cdn.jsdelivr.net/npm/dompurify@3.3.0/+esm";
+import TurndownService from "https://cdn.jsdelivr.net/npm/turndown@7.2.0/+esm";
 
 // ==========================================
 // 1. CONFIGURATION
 // ==========================================
 
 // Replace these values with your saved Firebase config.
-
+const turndownService = new TurndownService({
+  codeBlockStyle: "fenced",
+  headingStyle: "atx"
+});
+  
 const firebaseConfig = {
   apiKey: "YOUR_FIREBASE_API_KEY",
   authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
@@ -1463,6 +1702,7 @@ function showWelcome() {
 }
 
 
+
 function renderMessages() {
 
   const conversation = getActiveConversation();
@@ -1482,6 +1722,10 @@ function renderMessages() {
 
       const isUser = message.role === "user";
 
+      const content = DOMPurify.sanitize(
+  marked.parse(message.content || "")
+);
+
       return `
         <div class="message ${isUser ? "user" : "bot"}">
 
@@ -1492,7 +1736,7 @@ function renderMessages() {
             </div>
 
             <div class="bubble">
-              ${escapeHTML(message.content)}
+              ${content}
             </div>
 
           </div>
@@ -1501,10 +1745,137 @@ function renderMessages() {
       `;
 
     }).join("");
+  
 
+// Apply syntax highlighting and code block actions
+$("messages").querySelectorAll("pre code").forEach(block => {
+
+  hljs.highlightElement(block);
+
+  const pre = block.parentElement;
+
+  // Create toolbar
+  const toolbar = document.createElement("div");
+  toolbar.className = "code-toolbar";
+
+  // Copy button
+  const copyBtn = document.createElement("button");
+  copyBtn.type = "button";
+  copyBtn.textContent = "Copy";
+  copyBtn.className = "code-action-btn";
+
+  copyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(block.textContent);
+      copyBtn.textContent = "Copied!";
+    } catch (error) {
+      copyBtn.textContent = "Copy failed";
+    }
+
+    setTimeout(() => {
+      copyBtn.textContent = "Copy";
+    }, 1800);
+  });
+
+  toolbar.appendChild(copyBtn);
+
+  // Detect HTML code blocks
+  const isHTML =
+    block.classList.contains("language-html") ||
+    block.classList.contains("language-htm");
+
+  // Preview button (HTML only)
+  if (isHTML) {
+
+    const previewBtn = document.createElement("button");
+    previewBtn.type = "button";
+    previewBtn.textContent = "Preview ↗";
+    previewBtn.className = "code-action-btn";
+
+    previewBtn.addEventListener("click", () => {
+      openCodePreview(block.textContent);
+    });
+
+    toolbar.appendChild(previewBtn);
+  }
+
+  pre.parentElement.insertBefore(toolbar, pre);
+
+});
+
+  
   scrollToBottom();
 
 }
+
+function openCodePreview(code) {
+
+  const previewTab = window.open("", "_blank");
+
+  if (!previewTab) {
+    alert("Hindi nabuksan ang preview. Payagan muna ang pop-ups sa browser.");
+    return;
+  }
+
+  previewTab.document.open();
+
+  previewTab.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>Daneel Code Preview</title>
+      <style>
+        * {
+          box-sizing: border-box;
+        }
+
+        html, body {
+          margin: 0;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+          font-family: Arial, sans-serif;
+        }
+
+        .preview-header {
+          height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 14px;
+          background: #202633;
+          color: white;
+          font-size: 13px;
+        }
+
+        iframe {
+          display: block;
+          width: 100%;
+          height: calc(100% - 44px);
+          border: 0;
+          background: white;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="preview-header">
+        <strong>Daneel Code Preview</strong>
+        <span>Live HTML</span>
+      </div>
+    </body>
+    </html>
+  `);
+
+  const frame = previewTab.document.createElement("iframe");
+
+  frame.setAttribute("sandbox", "allow-scripts");
+  frame.srcdoc = code;
+
+  previewTab.document.body.appendChild(frame);
+  previewTab.document.close();
+}
+
 
 
 function addMessage(role, content) {
@@ -1563,9 +1934,14 @@ async function sendMessage() {
 
   }
 
-  const input = $("messageInput");
+  
+const input = $("messageInput");
+const editor = $("richMessageInput");
 
-  const message = input.value.trim();
+const message = getEditorMarkdown();
+
+input.value = message;
+
 
   if (!message) return;
 
@@ -1595,7 +1971,7 @@ async function sendMessage() {
     }));
 
   input.value = "";
-  input.style.height = "auto";
+editor.innerHTML = "";
 
   addMessage("user", message);
 
@@ -1669,7 +2045,7 @@ async function sendMessage() {
 
     showStatus("");
 
-    input.focus();
+    editor.focus();
 
   }
 
@@ -1679,14 +2055,19 @@ async function sendMessage() {
 $("sendButton").onclick = sendMessage;
 
 
-$("messageInput").addEventListener(
+$("richMessageInput").addEventListener(
   "keydown",
   event => {
 
-    if (
-      event.key === "Enter" &&
-      !event.shiftKey
-    ) {
+    if (event.key === "Enter") {
+
+      // Hayaan ang editor na gumawa ng bagong paragraph
+      event.stopPropagation();
+
+    }
+
+  }
+);
 
       event.preventDefault();
       sendMessage();
@@ -1697,19 +2078,7 @@ $("messageInput").addEventListener(
 );
 
 
-$("messageInput").addEventListener(
-  "input",
-  event => {
 
-    const input = event.target;
-
-    input.style.height = "auto";
-
-    input.style.height =
-      Math.min(input.scrollHeight,160) + "px";
-
-  }
-);
 
 
 // ==========================================
@@ -1717,6 +2086,67 @@ $("messageInput").addEventListener(
 // ==========================================
 
 showWelcome();
+
+// RICH TEXT EDITOR
+
+const richEditor = $("richMessageInput");
+
+// Keep the selected text active when clicking toolbar buttons
+document.querySelectorAll(".format-toolbar button").forEach(button => {
+
+  button.addEventListener("mousedown", event => {
+    event.preventDefault();
+  });
+
+  button.addEventListener("click", () => {
+
+    const command = button.dataset.command;
+    const value = button.dataset.value || null;
+
+    richEditor.focus();
+
+    document.execCommand(command, false, value);
+
+  });
+
+});
+
+// Convert rich text into Markdown
+function getEditorMarkdown() {
+
+  const cleanHTML = DOMPurify.sanitize(
+    richEditor.innerHTML
+  );
+
+  const service = new TurndownService({
+    codeBlockStyle: "fenced",
+    headingStyle: "atx"
+  });
+
+  service.addRule("codeBlock", {
+    filter: "pre",
+
+    replacement: function(content) {
+
+      const code = content
+        .replace(/\n+$/, "");
+
+      return "\n\n```\n" +
+        code +
+        "\n```\n\n";
+    }
+  });
+
+  return service.turndown(cleanHTML).trim();
+
+}
+
+// Update hidden textarea whenever editor changes
+richEditor.addEventListener("input", () => {
+
+  $("messageInput").value = getEditorMarkdown();
+
+});
 
 </script>
 
