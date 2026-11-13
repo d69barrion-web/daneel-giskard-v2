@@ -800,35 +800,69 @@ body.light .user .bubble {
   </main>
 
 
-  <!-- COMPOSER -->
+  
+<!-- COMPOSER -->
 
-  <footer class="composer-wrap">
+<footer class="composer-wrap">
 
-    <div class="composer">
+  <div class="composer-editor-wrap">
 
-      <textarea
-        id="messageInput"
-        rows="1"
-        placeholder="Message Daneel..."
-        aria-label="Message Daneel">
-      </textarea>
+    <div class="format-toolbar">
 
-      <button class="send-btn"
-        id="sendButton"
-        aria-label="Send message">
-        ➤
+      <button type="button" data-command="bold" title="Bold">
+        <b>B</b>
+      </button>
+
+      <button type="button" data-command="italic" title="Italic">
+        <i>I</i>
+      </button>
+
+      <button type="button" data-command="formatBlock" data-value="H2" title="Heading">
+        H
+      </button>
+
+      <button type="button" data-command="insertUnorderedList" title="Bullet list">
+        •≡
+      </button>
+
+      <button type="button" data-command="insertOrderedList" title="Numbered list">
+        1.
+      </button>
+
+      <button type="button" data-command="formatBlock" data-value="PRE" title="Code block">
+        &lt;/&gt;
       </button>
 
     </div>
 
-    <div class="composer-note">
-      Daneel Giskard v2
+    <div
+      id="richMessageInput"
+      class="rich-editor"
+      contenteditable="true"
+      data-placeholder="Message Daneel..."
+      aria-label="Message Daneel"
+      role="textbox"
+      aria-multiline="true">
     </div>
 
-    <div class="status" id="status"></div>
+    <textarea id="messageInput" hidden></textarea>
 
-  </footer>
+    <button
+      class="send-btn"
+      id="sendButton"
+      aria-label="Send message">
+      ➤
+    </button>
 
+  </div>
+
+  <div class="composer-note">
+    Daneel Giskard v2
+  </div>
+
+  <div class="status" id="status"></div>
+
+</footer>
 </div>
 
 
