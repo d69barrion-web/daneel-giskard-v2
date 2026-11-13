@@ -3003,6 +3003,55 @@ $("richMessageInput").addEventListener(
   }
 );
 
+// ==========================================
+// FEATURE MENU
+// ==========================================
+
+const featureMenuButton = $("featureMenuButton");
+const featureMenuPanel = $("featureMenuPanel");
+const closeFeatureMenu = $("closeFeatureMenu");
+
+function toggleFeatureMenu(force) {
+  const isOpen = force !== undefined
+    ? force
+    : featureMenuPanel.classList.contains("hidden");
+
+  featureMenuPanel.classList.toggle("hidden", !isOpen);
+
+  featureMenuButton.setAttribute(
+    "aria-expanded",
+    String(isOpen)
+  );
+}
+
+// Open / toggle
+featureMenuButton.addEventListener("click", event => {
+  event.stopPropagation();
+  toggleFeatureMenu();
+});
+
+// Close button
+closeFeatureMenu.addEventListener("click", () => {
+  toggleFeatureMenu(false);
+});
+
+// Close when clicking outside
+document.addEventListener("click", event => {
+  if (
+    !featureMenuPanel.contains(event.target) &&
+    !featureMenuButton.contains(event.target)
+  ) {
+    toggleFeatureMenu(false);
+  }
+});
+
+// Close with Escape
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") {
+    toggleFeatureMenu(false);
+  }
+});
+
 
 // RICH TEXT EDITOR
 
