@@ -732,6 +732,99 @@ body.light .user .bubble {
   background: #3a4353;
 }
 
+/* RICH TEXT COMPOSER */
+
+.composer-editor-wrap {
+  max-width: 900px;
+  margin: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 9px 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+}
+
+.format-toolbar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--border);
+}
+
+.format-toolbar button {
+  min-width: 34px;
+  height: 32px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.format-toolbar button:hover {
+  background: var(--panel2);
+}
+
+.rich-editor {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  max-height: 160px;
+  overflow-y: auto;
+  outline: none;
+  padding: 10px 4px;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.rich-editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.rich-editor h2 {
+  font-size: 1.3em;
+  margin: 8px 0;
+}
+
+.rich-editor pre {
+  padding: 10px;
+  background: var(--panel2);
+  border-radius: 8px;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.rich-editor ul,
+.rich-editor ol {
+  padding-left: 24px;
+}
+
+.rich-editor code {
+  font-family: monospace;
+  background: var(--panel2);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.composer-editor-wrap .send-btn {
+  flex-shrink: 0;
+}
+
+#messageInput {
+  display: none;
+}
+
 </style>
   
 <link
