@@ -1956,7 +1956,8 @@ $("signOutButton").onclick = async () => {
 };
 
 
-onAuthStateChanged(auth, user => {
+
+onAuthStateChanged(auth, async user => {
 
   currentUser = user;
 
@@ -1973,10 +1974,32 @@ onAuthStateChanged(auth, user => {
 
     $("signOutButton").classList.remove("hidden");
 
-    loadLocalData();
     loadTheme();
     loadPreferredName();
-    testFirestoreRead();
+
+    try {
+
+      await loadConversationsFromCloud();
+
+      if (!currentUser || currentUser.uid !== user.uid) {
+        return;
+      }
+
+      showStatus("Conversations loaded from cloud.");
+
+    } catch (error) {
+
+      console.error("Cloud loading failed:", error);
+
+      if (!currentUser || currentUser.uid !== user.uid) {
+        return;
+      }
+
+      showStatus(
+        "Unable to load conversations: " + error.message
+      );
+
+    }
 
   } else {
 
@@ -1996,6 +2019,7 @@ onAuthStateChanged(auth, user => {
   }
 
 });
+
 
 
 // ==========================================
