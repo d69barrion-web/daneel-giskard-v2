@@ -2098,7 +2098,27 @@ function getEditorMarkdown() {
     richEditor.innerHTML
   );
 
-  return turndownService.turndown(cleanHTML).trim();
+  const service = new TurndownService({
+    codeBlockStyle: "fenced",
+    headingStyle: "atx"
+  });
+
+  service.addRule("codeBlock", {
+    filter: "pre",
+
+    replacement: function(content) {
+
+      const code = content
+        .replace(/\n+$/, "");
+
+      return "\n\n```\n" +
+        code +
+        "\n```\n\n";
+    }
+  });
+
+  return service.turndown(cleanHTML).trim();
+
 }
 // Update hidden textarea whenever editor changes
 richEditor.addEventListener("input", () => {
