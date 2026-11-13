@@ -1152,6 +1152,15 @@ body.light .user .bubble {
 
       </div>
     </div>
+    
+<!-- IMAGE FILE PICKER -->
+<input
+  type="file"
+  id="imageFileInput"
+  accept="image/*"
+  multiple
+  hidden
+/>
 
     <!-- MESSAGE EDITOR -->
     <div
@@ -3051,7 +3060,18 @@ document.addEventListener("keydown", event => {
     toggleFeatureMenu(false);
   }
 });
+  
+// Open Android image picker
+const imageFileInput = $("imageFileInput");
 
+const imageFeatureButton = document.querySelector(
+  '[data-feature="image"]'
+);
+
+imageFeatureButton.addEventListener("click", () => {
+  toggleFeatureMenu(false);
+  imageFileInput.click();
+});
 
 // RICH TEXT EDITOR
 
