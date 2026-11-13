@@ -1933,9 +1933,12 @@ async function sendMessage() {
   }
 
   const input = $("messageInput");
+  const editor = $("richMessageInput");
 
-  const message = input.value.trim();
+  const message = getEditorMarkdown();
 
+  input.value = message;
+  
   if (!message) return;
 
   if (
@@ -1964,7 +1967,7 @@ async function sendMessage() {
     }));
 
   input.value = "";
-  input.style.height = "auto";
+  editor.innerHTML = "";
 
   addMessage("user", message);
 
@@ -2038,7 +2041,7 @@ async function sendMessage() {
 
     showStatus("");
 
-    input.focus();
+    editor.focus();
 
   }
 
@@ -2048,7 +2051,7 @@ async function sendMessage() {
 $("sendButton").onclick = sendMessage;
 
 
-$("messageInput").addEventListener(
+$("richMessageInput").addEventListener(
   "keydown",
   event => {
 
@@ -2065,20 +2068,6 @@ $("messageInput").addEventListener(
   }
 );
 
-
-$("messageInput").addEventListener(
-  "input",
-  event => {
-
-    const input = event.target;
-
-    input.style.height = "auto";
-
-    input.style.height =
-      Math.min(input.scrollHeight,160) + "px";
-
-  }
-);
 
 // RICH TEXT EDITOR
 
