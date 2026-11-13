@@ -1265,7 +1265,45 @@ const firebaseConfig = {
 const API_BASE_URL =
   "https://daneel-giskard-v2.onrender.com";
 
+// ==========================================
+// FIRESTORE API HELPER
+// ==========================================
 
+async function firestoreRequest(
+  endpoint,
+  options = {}
+) {
+
+  if (!currentUser) {
+    throw new Error("User is not signed in.");
+  }
+
+  const token = await currentUser.getIdToken();
+
+  const response = await fetch(
+    API_BASE_URL + endpoint,
+    {
+      ...options,
+
+      headers: {
+        ...(options.headers || {}),
+        "Authorization": "Bearer " + token,
+        "Content-Type": "application/json"
+      }
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok || !data.ok) {
+    throw new Error(
+      data.error || "Firestore request failed."
+    );
+  }
+
+  return data;
+
+}
 // ==========================================
 // 2. FIREBASE INITIALIZATION
 // ==========================================
