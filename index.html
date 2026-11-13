@@ -1361,6 +1361,85 @@ async function saveFirestoreConversation(conversation) {
 }
   
 // ==========================================
+// QUEUE FIRESTORE SAVES
+// ==========================================
+
+function queueFirestoreSave(conversation) {
+
+  if (!currentUser) {
+    return Promise.resolve(null);
+  }
+
+  if (!conversation || !conversation.id) {
+    return Promise.reject(
+      new Error("Invalid conversation.")
+    );
+  }
+
+  const ownerUid = currentUser.uid;
+  const conversationId = conversation.id;
+  const queueKey = ownerUid + "_" + conversationId;
+
+  // Capture a snapshot so later changes
+  // cannot alter an already queued save.
+  const snapshot = JSON.parse(
+    JSON.stringify(conversation)
+  );
+
+  const previousSave =
+    firestoreSaveQueues.get(queueKey) ||
+    Promise.resolve();
+
+  const currentSave = previousSave
+    .catch(() => {
+      // Allow the next save even if
+      // the previous save failed.
+    })
+    .then(() => {
+
+      // Prevent saving under another account.
+      if (
+        !currentUser ||
+        currentUser.uid !== ownerUid
+      ) {
+        throw new Error(
+          "User changed before Firestore save."
+        );
+      }
+
+      return saveFirestoreConversation(snapshot);
+
+    });
+
+  firestoreSaveQueues.set(
+    queueKey,
+    currentSave
+  );
+
+  // Remove completed queue without
+  // accidentally removing a newer request.
+  currentSave.then(
+    () => {
+      if (
+        firestoreSaveQueues.get(queueKey) === currentSave
+      ) {
+        firestoreSaveQueues.delete(queueKey);
+      }
+    },
+    () => {
+      if (
+        firestoreSaveQueues.get(queueKey) === currentSave
+      ) {
+        firestoreSaveQueues.delete(queueKey);
+      }
+    }
+  );
+
+  return currentSave;
+
+}
+  
+// ==========================================
 // 2. FIREBASE INITIALIZATION
 // ==========================================
 
@@ -1382,6 +1461,8 @@ let currentUser = null;
 let conversations = [];
 let activeConversationId = null;
 let isSending = false;
+// Track pending Firestore saves
+const firestoreSaveQueues = new Map();
 
 const STORAGE_PREFIX = "daneel_v2_";
 
