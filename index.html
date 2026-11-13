@@ -791,6 +791,82 @@ body.light .user .bubble {
   border-bottom: 1px solid var(--border);
 }
 
+/* FEATURE MENU */
+
+.composer-editor-wrap {
+  position: relative;
+}
+
+.feature-menu-button {
+  font-size: 22px !important;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.feature-menu-panel {
+  position: absolute;
+  left: 10px;
+  bottom: calc(100% + 12px);
+  width: min(300px, calc(100vw - 40px));
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.22);
+  z-index: 1000;
+}
+
+.feature-menu-panel.hidden {
+  display: none;
+}
+
+.feature-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.feature-menu-header button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 23px;
+  cursor: pointer;
+}
+
+.feature-menu-items {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.feature-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 48px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel2);
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.feature-menu-item:hover {
+  background: var(--bg);
+}
+
+.feature-menu-item span:first-child {
+  font-size: 19px;
+}
+
 .format-toolbar button {
   min-width: 34px;
   height: 32px;
@@ -982,14 +1058,29 @@ body.light .user .bubble {
 
 
   
+
 <!-- COMPOSER -->
 
 <footer class="composer-wrap">
 
   <div class="composer-editor-wrap">
 
+    <!-- FORMAT TOOLBAR -->
     <div class="format-toolbar">
 
+      <!-- FUTURE FEATURES BUTTON -->
+      <button
+        type="button"
+        id="featureMenuButton"
+        class="feature-menu-button"
+        title="More features"
+        aria-label="More features"
+        aria-expanded="false"
+        aria-controls="featureMenuPanel">
+        +
+      </button>
+
+      <!-- RICH TEXT CONTROLS -->
       <button type="button" data-command="bold" title="Bold">
         <b>B</b>
       </button>
@@ -1014,8 +1105,55 @@ body.light .user .bubble {
         &lt;/&gt;
       </button>
 
+      <button type="button" data-command="formatBlock" data-value="P" title="Normal paragraph">
+        ¶
+      </button>
+
     </div>
 
+    <!-- FLOATING FEATURE PANEL -->
+    <div
+      id="featureMenuPanel"
+      class="feature-menu-panel hidden"
+      aria-label="Additional features">
+
+      <div class="feature-menu-header">
+        <span>More features</span>
+
+        <button
+          type="button"
+          id="closeFeatureMenu"
+          aria-label="Close menu">
+          ×
+        </button>
+      </div>
+
+      <div class="feature-menu-items">
+
+        <button type="button" class="feature-menu-item" data-feature="image">
+          <span>🖼️</span>
+          <span>Images</span>
+        </button>
+
+        <button type="button" class="feature-menu-item" data-feature="files">
+          <span>📎</span>
+          <span>Files</span>
+        </button>
+
+        <button type="button" class="feature-menu-item" data-feature="research">
+          <span>🌐</span>
+          <span>Research</span>
+        </button>
+
+        <button type="button" class="feature-menu-item" data-feature="tools">
+          <span>🛠️</span>
+          <span>Tools</span>
+        </button>
+
+      </div>
+    </div>
+
+    <!-- MESSAGE EDITOR -->
     <div
       id="richMessageInput"
       class="rich-editor"
@@ -1028,6 +1166,7 @@ body.light .user .bubble {
 
     <textarea id="messageInput" hidden></textarea>
 
+    <!-- SEND BUTTON -->
     <button
       class="send-btn"
       id="sendButton"
@@ -1045,7 +1184,6 @@ body.light .user .bubble {
 
 </footer>
 </div>
-
 
 <!-- CONVERSATION DRAWER -->
 
