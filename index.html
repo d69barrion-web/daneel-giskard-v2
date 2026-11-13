@@ -994,10 +994,13 @@ body.light .user .bubble {
 .image-preview-area {
   width: 100%;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 10px;
-  padding: 5px 0;
-}
+  padding: 8px 2px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  }
 
 .image-preview-area.hidden {
   display: none;
@@ -1007,6 +1010,7 @@ body.light .user .bubble {
   position: relative;
   width: 76px;
   height: 76px;
+  flex-shrink: 0;
 }
 
 .image-preview-item img {
