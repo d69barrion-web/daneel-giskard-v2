@@ -1361,6 +1361,48 @@ async function saveFirestoreConversation(conversation) {
 }
   
 // ==========================================
+// DELETE CONVERSATION FROM FIRESTORE
+// ==========================================
+
+async function deleteFirestoreConversation(conversationId) {
+
+  if (!conversationId) {
+    throw new Error("Invalid conversation ID.");
+  }
+
+  if (!currentUser) {
+    throw new Error("User is not signed in.");
+  }
+
+  const ownerUid = currentUser.uid;
+  const queueKey = ownerUid + "_" + conversationId;
+
+  // Wait for pending saves before deleting.
+  const pendingSave =
+    firestoreSaveQueues.get(queueKey);
+
+  if (pendingSave) {
+    await pendingSave.catch(() => {});
+  }
+
+  // Make sure the same user is still signed in.
+  if (
+    !currentUser ||
+    currentUser.uid !== ownerUid
+  ) {
+    throw new Error("User changed before deletion.");
+  }
+
+  return await firestoreRequest(
+    "/conversations/" +
+    encodeURIComponent(conversationId),
+    {
+      method: "DELETE"
+    }
+  );
+
+}
+// ==========================================
 // QUEUE FIRESTORE SAVES
 // ==========================================
 
