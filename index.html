@@ -2098,9 +2098,12 @@ function getEditorMarkdown() {
     richEditor.innerHTML
   );
 
-  return turndownService.turndown(cleanHTML).trim();
-}
+  const markdown = turndownService.turndown(cleanHTML).trim();
 
+console.log("EDITOR HTML:", richEditor.innerHTML);
+console.log("GENERATED MARKDOWN:", markdown);
+
+return markdown;
 // Update hidden textarea whenever editor changes
 richEditor.addEventListener("input", () => {
 
