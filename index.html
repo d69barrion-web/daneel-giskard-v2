@@ -2080,6 +2080,47 @@ $("messageInput").addEventListener(
   }
 );
 
+// RICH TEXT EDITOR
+
+const richEditor = $("richMessageInput");
+
+// Keep the selected text active when clicking toolbar buttons
+document.querySelectorAll(".format-toolbar button").forEach(button => {
+
+  button.addEventListener("mousedown", event => {
+    event.preventDefault();
+  });
+
+  button.addEventListener("click", () => {
+
+    const command = button.dataset.command;
+    const value = button.dataset.value || null;
+
+    richEditor.focus();
+
+    document.execCommand(command, false, value);
+
+  });
+
+});
+
+// Convert rich text into Markdown
+function getEditorMarkdown() {
+
+  const cleanHTML = DOMPurify.sanitize(
+    richEditor.innerHTML
+  );
+
+  return turndownService.turndown(cleanHTML).trim();
+}
+
+// Update hidden textarea whenever editor changes
+richEditor.addEventListener("input", () => {
+
+  $("messageInput").value = getEditorMarkdown();
+
+});
+
 
 // ==========================================
 // 12. INITIALIZATION
