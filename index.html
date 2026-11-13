@@ -859,7 +859,60 @@ body.light .user .bubble {
 #messageInput {
   display: none;
 }
+/* CONVERSATION ACTION BUTTONS */
+.conversation-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+}
 
+.edit-conversation-btn,
+.delete-conversation-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s,
+              transform 0.15s;
+}
+
+/* EDIT BUTTON */
+.edit-conversation-btn:hover {
+  background: var(--panel2);
+  color: var(--text);
+}
+
+/* DELETE BUTTON */
+.delete-conversation-btn {
+  color: #dc7777;
+}
+
+.delete-conversation-btn:hover {
+  background: rgba(220, 80, 80, 0.12);
+  color: #ff5555;
+}
+
+/* CLICK EFFECT */
+.edit-conversation-btn:active,
+.delete-conversation-btn:active {
+  transform: scale(0.92);
+}
+
+/* KEYBOARD FOCUS */
+.edit-conversation-btn:focus-visible,
+.delete-conversation-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 </style>
   
 <link
