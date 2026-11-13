@@ -666,6 +666,41 @@ body.light .user .bubble {
   margin: 0.2em 0;
 }
 
+/* Markdown code blocks */
+
+.bubble pre {
+  margin: 12px 0;
+  padding: 14px;
+  border-radius: 10px;
+  background: #171b26;
+  color: #e6edf3;
+  overflow-x: auto;
+  max-width: 100%;
+  white-space: pre;
+  line-height: 1.5;
+  font-size: 13px;
+}
+
+.bubble pre code {
+  display: block;
+  font-family: Consolas, Monaco, monospace;
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.bubble :not(pre) > code {
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--panel2);
+  font-family: Consolas, Monaco, monospace;
+  font-size: 0.9em;
+}
+
+.bubble pre:last-child {
+  margin-bottom: 0;
+}
+
 </style>
 </head>
 
