@@ -1717,7 +1717,7 @@ function renderMessages() {
   }
 
   $("messages").innerHTML =
-    conversation.messages.map(message => {
+    conversation.messages.map((message, index) => {
 
       const isUser = message.role === "user";
 
@@ -1736,6 +1736,16 @@ function renderMessages() {
 
             <div class="bubble">
               ${content}
+            </div>
+
+            <div class="message-actions">
+               <button
+                  type="button"
+                  class="copy-message-btn"
+                  data-index="${index}"
+                  title="Copy message">
+                   ⧉ Copy
+                </button>
             </div>
 
           </div>
