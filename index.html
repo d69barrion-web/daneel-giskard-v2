@@ -2282,28 +2282,71 @@ renderConversationList();
 
   if (!confirmed) return;
 
-  // Remove conversation
+  if (deleteButton) {
+
+  const conversationId =
+    deleteButton.dataset.delete;
+
+  const index = conversations.findIndex(
+    item => item.id === conversationId
+  );
+
+  if (index === -1) return;
+
+  const conversation = conversations[index];
+
+  const confirmed = confirm(
+    `Delete "${conversation.title}"?\n\nThis cannot be undone.`
+  );
+
+  if (!confirmed) return;
+
+  // Remove from local conversations
   conversations.splice(index, 1);
 
-  // If the deleted conversation was active,
-  // select the next available conversation
+  // Select another conversation if needed
   if (activeConversationId === conversationId) {
+
     const sorted = [...conversations].sort((a, b) => {
+
       if (a.pinned !== b.pinned) {
         return a.pinned ? -1 : 1;
       }
+
       return b.updatedAt - a.updatedAt;
+
     });
 
     activeConversationId = sorted.length
       ? sorted[0].id
       : null;
+
   }
 
+  // Save local changes
   saveLocalData();
+
   renderConversationList();
   renderMessages();
+
+  // Delete from Firestore
+  deleteFirestoreConversation(
+    conversationId
+  ).then(() => {
+
+    showStatus("Conversation deleted from cloud.");
+
+  }).catch(error => {
+
+    showStatus(
+      "Deleted locally, but cloud deletion failed: " +
+      error.message
+    );
+
+  });
+
 }
+    }
 
   }
 );
