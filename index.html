@@ -3114,10 +3114,6 @@ const imageFeatureButton = document.querySelector(
   '[data-feature="image"]'
 );
 
-imageFeatureButton.addEventListener("click", () => {
-  toggleFeatureMenu(false);
-  imageFileInput.click();
-});
 // ==========================================
 // IMAGE PREVIEW
 // ==========================================
@@ -3179,7 +3175,6 @@ imageFileInput.addEventListener("change", () => {
 
   newFiles.forEach(file => {
 
-    // Avoid adding the exact same file twice
     const alreadySelected = selectedImages.some(image =>
       image.file.name === file.name &&
       image.file.size === file.size &&
@@ -3197,10 +3192,16 @@ imageFileInput.addEventListener("change", () => {
 
   renderImagePreviews();
 
-  // Allow selecting the same files again
   imageFileInput.value = "";
 
 });
+
+// Open image picker
+imageFeatureButton.addEventListener("click", () => {
+  toggleFeatureMenu(false);
+  imageFileInput.click();
+});
+
   
 // RICH TEXT EDITOR
 
