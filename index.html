@@ -1484,6 +1484,12 @@ function renderMessages() {
 
       const isUser = message.role === "user";
 
+      const content = isUser
+        ? escapeHTML(message.content)
+        : DOMPurify.sanitize(
+            marked.parse(message.content || "")
+          );
+
       return `
         <div class="message ${isUser ? "user" : "bot"}">
 
@@ -1494,7 +1500,7 @@ function renderMessages() {
             </div>
 
             <div class="bubble">
-              ${escapeHTML(message.content)}
+              ${content}
             </div>
 
           </div>
@@ -1507,6 +1513,7 @@ function renderMessages() {
   scrollToBottom();
 
 }
+
 
 
 function addMessage(role, content) {
