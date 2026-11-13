@@ -1977,8 +1977,18 @@ function createConversation() {
   activeConversationId = conversation.id;
 
   saveLocalData();
-  renderConversationList();
-  renderMessages();
+
+queueFirestoreSave(conversation).catch(error => {
+
+  showStatus(
+    "Local copy saved, but cloud sync failed: " +
+    error.message
+  );
+
+});
+
+renderConversationList();
+renderMessages();
 
   closeDrawer();
 
