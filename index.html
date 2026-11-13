@@ -1296,7 +1296,49 @@ function storageKey(name) {
     (currentUser?.uid || "guest") +
     "_" + name;
 }
+  
+async function testFirestoreRead() {
 
+  if (!currentUser) return;
+
+  try {
+
+    const token = await currentUser.getIdToken();
+
+    const response = await fetch(
+      API_BASE_URL + "/conversations",
+      {
+        method: "GET",
+        headers: {
+          "Authorization": "Bearer " + token
+        }
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      throw new Error(
+        data.error || "Firestore read failed."
+      );
+    }
+
+    showStatus(
+      "Firestore connected! " +
+      data.conversations.length +
+      " conversations found."
+    );
+
+  } catch (error) {
+
+    showStatus(
+      "Firestore test failed: " + error.message
+    );
+
+  }
+
+}
+  
 function saveLocalData() {
 
   if (!currentUser) return;
