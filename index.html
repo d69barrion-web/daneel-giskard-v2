@@ -2510,8 +2510,18 @@ function addMessage(role, content) {
   }
 
   saveLocalData();
-  renderConversationList();
-  renderMessages();
+
+queueFirestoreSave(conversation).catch(error => {
+
+  showStatus(
+    "Local copy saved, but cloud sync failed: " +
+    error.message
+  );
+
+});
+
+renderConversationList();
+renderMessages();
 
 }
 
