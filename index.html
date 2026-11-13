@@ -1587,11 +1587,9 @@ function renderMessages() {
 
       const isUser = message.role === "user";
 
-      const content = isUser
-        ? escapeHTML(message.content)
-        : DOMPurify.sanitize(
-            marked.parse(message.content || "")
-          );
+      const content = DOMPurify.sanitize(
+  marked.parse(message.content || "")
+);
 
       return `
         <div class="message ${isUser ? "user" : "bot"}">
