@@ -489,6 +489,50 @@ app.get("/health", (req, res) => {
 
 });
 
+// ==========================================
+// 9.1 GET USER CONVERSATIONS
+// ==========================================
+
+app.get(
+  "/conversations",
+  requireAuth,
+  async (req, res) => {
+
+    try {
+
+      const snapshot =
+        await getUserConversationsCollection(
+          req.user.uid
+        ).get();
+
+      const conversations = snapshot.docs.map(
+        doc => ({
+          ...doc.data(),
+          id: doc.id
+        })
+      );
+
+      return res.json({
+        ok: true,
+        conversations
+      });
+
+    } catch (error) {
+
+      console.error(
+        "Load conversations failed:",
+        error.message
+      );
+
+      return res.status(500).json({
+        ok: false,
+        error: "Unable to load conversations."
+      });
+
+    }
+
+  }
+);
 
 // ==========================================
 // 10. MAIN CHAT ENDPOINT
