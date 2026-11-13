@@ -1754,7 +1754,42 @@ function renderMessages() {
       `;
 
     }).join("");
+  
+    // COPY ENTIRE MESSAGE
 
+$("messages").querySelectorAll(".copy-message-btn")
+  .forEach(button => {
+
+    button.addEventListener("click", async () => {
+
+      const messageElement =
+        button.closest(".message");
+
+      const bubble =
+        messageElement.querySelector(".bubble");
+
+      const textToCopy = bubble.innerText;
+
+      try {
+
+        await navigator.clipboard.writeText(textToCopy);
+
+        button.textContent = "✓ Copied!";
+
+      } catch (error) {
+
+        button.textContent = "Copy failed";
+
+      }
+
+      setTimeout(() => {
+        button.textContent = "⧉ Copy";
+      }, 1800);
+
+    });
+
+  });
+  
 // Apply syntax highlighting and code block actions
 $("messages").querySelectorAll("pre code").forEach(block => {
 
