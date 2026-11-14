@@ -1244,7 +1244,54 @@ body.light .user .bubble {
   </div>
 
   <div class="status" id="status"></div>
+ <!-- INTENT CLASSIFIER TEST PANEL -->
 
+<div style="
+  padding: 12px;
+  margin: 10px 0;
+  border: 1px solid #475569;
+  border-radius: 10px;
+">
+
+  <div style="
+    font-weight: bold;
+    margin-bottom: 8px;
+  ">
+    Intent Classifier Test
+  </div>
+
+  <button
+    type="button"
+    id="testIntentButton"
+    style="
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      background: #2563eb;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    "
+  >
+    Test Intent Classifier
+  </button>
+
+  <pre
+    id="intentDebugOutput"
+    style="
+      display: none;
+      margin-top: 12px;
+      padding: 12px;
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 8px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-size: 12px;
+    "
+  ></pre>
+
+</div>
 </footer>
 </div>
 
@@ -3049,6 +3096,90 @@ async function sendMessage() {
 
 
 $("sendButton").onclick = sendMessage;
+
+async function testIntentClassifier() {
+
+  const button = $("testIntentButton");
+  const output = $("intentDebugOutput");
+
+  if (!currentUser) {
+    showStatus("Please sign in first.");
+    return;
+  }
+
+  const message = getEditorMarkdown().trim();
+
+  if (!message) {
+    showStatus("Please enter a message to classify.");
+    return;
+  }
+
+  if (
+    API_BASE_URL.includes("YOUR-RENDER-SERVICE")
+  ) {
+    showStatus("Backend connection is not configured.");
+    return;
+  }
+
+  button.disabled = true;
+  output.style.display = "block";
+  output.textContent = "Running classifier...";
+
+  try {
+
+    const token = await currentUser.getIdToken();
+
+    const response = await fetch(
+      API_BASE_URL + "/classify-intent",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+
+        body: JSON.stringify({
+          message,
+          hasImages: selectedImages.length > 0
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      throw new Error(
+        data.error || "Classification request failed."
+      );
+    }
+
+    output.textContent = JSON.stringify(
+      data,
+      null,
+      2
+    );
+
+    showStatus("Classifier test completed.");
+
+  } catch (error) {
+
+    output.textContent = JSON.stringify({
+      ok: false,
+      error: error.message
+    }, null, 2);
+
+    showStatus("Classifier test failed.");
+
+  } finally {
+
+    button.disabled = false;
+
+  }
+
+}
+
+$("testIntentButton").onclick = testIntentClassifier;
 
 
 
