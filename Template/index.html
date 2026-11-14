@@ -1,0 +1,3284 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#171923">
+<title>Daneel Giskard v2</title>
+
+<style>
+:root {
+  --bg:#171923;
+  --panel:#202331;
+  --panel2:#292e3d;
+  --text:#edf0f7;
+  --muted:#9ba3b5;
+  --border:#353b4c;
+  --accent:#648bea;
+  --accent2:#426bc0;
+  --user:#315b9d;
+  --danger:#e36b73;
+  --shadow:0 12px 40px rgba(0,0,0,.35);
+}
+
+body.light {
+  --bg:#f5f6fa;
+  --panel:#ffffff;
+  --panel2:#eef0f5;
+  --text:#202638;
+  --muted:#747d90;
+  --border:#dfe3eb;
+  --accent:#416fd0;
+  --accent2:#315db7;
+  --user:#dce8ff;
+  --danger:#c83f50;
+  --shadow:0 12px 40px rgba(30,40,60,.15);
+}
+
+* {
+  box-sizing:border-box;
+}
+
+body {
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,
+  "Segoe UI",sans-serif;
+  height:100dvh;
+  overflow:hidden;
+  transition:background .2s,color .2s;
+}
+
+button,input,textarea {
+  font:inherit;
+}
+
+button {
+  cursor:pointer;
+}
+
+.app {
+  height:100dvh;
+  display:flex;
+  flex-direction:column;
+  position:relative;
+}
+
+/* HEADER */
+
+.header {
+  height:62px;
+  min-height:62px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 15px;
+  border-bottom:1px solid var(--border);
+  background:var(--bg);
+  z-index:5;
+}
+
+.header-left,
+.header-right {
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.header-title {
+  font-size:16px;
+  font-weight:650;
+  letter-spacing:.1px;
+}
+
+.icon-btn {
+  width:38px;
+  height:38px;
+  border:0;
+  border-radius:11px;
+  background:transparent;
+  color:var(--text);
+  display:grid;
+  place-items:center;
+  font-size:20px;
+}
+
+.icon-btn:hover {
+  background:var(--panel2);
+}
+
+.icon-btn svg {
+  width:21px;
+  height:21px;
+  stroke:currentColor;
+  fill:none;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+/* CONVERSATION */
+
+.chat-area {
+  flex:1;
+  min-height:0;
+  overflow-y:auto;
+  scroll-behavior:smooth;
+}
+
+.messages {
+  width:100%;
+  max-width:900px;
+  margin:auto;
+  padding:28px 20px 35px;
+}
+
+.welcome {
+  min-height:55vh;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  padding:20px;
+}
+
+.welcome-logo {
+  width:65px;
+  height:65px;
+  border-radius:22px;
+  display:grid;
+  place-items:center;
+  background:var(--panel2);
+  color:var(--accent);
+  font-size:30px;
+  margin-bottom:18px;
+}
+
+.welcome h2 {
+  font-size:24px;
+  margin:0 0 8px;
+  font-weight:650;
+}
+
+.welcome p {
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.6;
+  max-width:340px;
+}
+
+.message {
+  display:flex;
+  margin:22px 0;
+  width:100%;
+}
+
+.message.user {
+  justify-content:flex-end;
+}
+
+.bubble {
+  max-width:min(85%,720px);
+  padding:12px 16px;
+  border-radius:17px;
+  line-height:1.7;
+  font-size:15px;
+  overflow-wrap:anywhere;
+  white-space:normal;
+}
+
+.user .bubble {
+  background:var(--user);
+  border-bottom-right-radius:5px;
+  color:var(--text);
+}
+
+body.light .user .bubble {
+  color:#1d3155;
+}
+
+.bot .bubble {
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-bottom-left-radius:5px;
+}
+
+.message-label {
+  font-size:11px;
+  color:var(--muted);
+  margin-bottom:5px;
+}
+
+.message-inner {
+  display:flex;
+  flex-direction:column;
+}
+
+.bot .message-inner {
+  max-width:100%;
+}
+
+.typing {
+  color:var(--muted);
+  font-size:13px;
+  padding:12px 4px;
+}
+
+/* COMPOSER */
+
+.composer-wrap {
+  padding:10px 15px 12px;
+  background:var(--bg);
+  border-top:1px solid var(--border);
+}
+
+.composer {
+  max-width:900px;
+  margin:auto;
+  display:flex;
+  align-items:flex-end;
+  gap:9px;
+  padding:9px 10px;
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:18px;
+}
+
+.composer textarea {
+  flex:1;
+  min-width:0;
+  resize:none;
+  max-height:160px;
+  min-height:40px;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:var(--text);
+  padding:10px 4px;
+  line-height:1.5;
+  font-size:15px;
+}
+
+.composer textarea::placeholder {
+  color:var(--muted);
+}
+
+.send-btn {
+  width:42px;
+  height:42px;
+  flex-shrink:0;
+  border:0;
+  border-radius:13px;
+  background:var(--accent);
+  color:white;
+  font-size:19px;
+}
+
+.send-btn:disabled {
+  opacity:.4;
+  cursor:not-allowed;
+}
+
+.composer-note {
+  max-width:900px;
+  margin:7px auto 0;
+  text-align:center;
+  color:var(--muted);
+  font-size:10px;
+}
+
+/* DRAWER AND OVERLAY */
+
+.overlay {
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.48);
+  z-index:20;
+  display:none;
+}
+
+.overlay.open {
+  display:block;
+}
+
+.drawer {
+  position:absolute;
+  left:0;
+  top:0;
+  bottom:0;
+  width:min(330px,86vw);
+  background:var(--panel);
+  box-shadow:var(--shadow);
+  display:flex;
+  flex-direction:column;
+  transform:translateX(-105%);
+  transition:transform .23s ease;
+}
+
+.overlay.open .drawer {
+  transform:translateX(0);
+}
+
+.drawer-header {
+  padding:17px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:1px solid var(--border);
+}
+
+.drawer-heading {
+  font-size:16px;
+  font-weight:650;
+}
+
+.drawer-actions {
+  padding:13px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.primary-btn {
+  border:0;
+  border-radius:12px;
+  background:var(--accent);
+  color:white;
+  padding:12px 14px;
+  font-weight:600;
+}
+
+.secondary-btn {
+  border:1px solid var(--border);
+  border-radius:11px;
+  background:var(--panel2);
+  color:var(--text);
+  padding:10px 12px;
+}
+
+.search-box {
+  margin:0 13px 10px;
+  width:calc(100% - 26px);
+  padding:11px 12px;
+  border-radius:11px;
+  border:1px solid var(--border);
+  background:var(--bg);
+  color:var(--text);
+  outline:none;
+}
+
+.conversation-list {
+  flex:1;
+  min-height:0;
+  overflow-y:auto;
+  padding:4px 10px 12px;
+}
+
+.list-label {
+  color:var(--muted);
+  font-size:11px;
+  padding:10px 8px 7px;
+  text-transform:uppercase;
+  letter-spacing:.8px;
+}
+
+.conversation-item {
+  display:flex;
+  align-items:center;
+  gap:5px;
+  padding:3px;
+  border-radius:11px;
+  margin-bottom:3px;
+}
+
+.conversation-item.active {
+  background:var(--panel2);
+}
+
+.conversation-select {
+  flex:1;
+  min-width:0;
+  text-align:left;
+  padding:10px 8px;
+  border:0;
+  background:transparent;
+  color:var(--text);
+}
+
+.conversation-name {
+  font-size:13px;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+
+.conversation-date {
+  color:var(--muted);
+  font-size:10px;
+  margin-top:4px;
+}
+
+.pin-btn,
+.more-btn {
+  width:32px;
+  height:34px;
+  border:0;
+  border-radius:8px;
+  background:transparent;
+  color:var(--muted);
+}
+
+.pin-btn.pinned {
+  color:#e7b85e;
+}
+
+.drawer-footer {
+  padding:13px;
+  border-top:1px solid var(--border);
+}
+
+.account-info {
+  color:var(--muted);
+  font-size:11px;
+  padding:4px 5px 12px;
+  overflow-wrap:anywhere;
+}
+
+.signout-btn {
+  width:100%;
+  border:1px solid var(--border);
+  background:transparent;
+  color:var(--danger);
+  padding:11px;
+  border-radius:11px;
+  font-weight:600;
+}
+
+/* SETTINGS */
+
+.settings-overlay {
+  position:fixed;
+  inset:0;
+  z-index:25;
+  background:rgba(0,0,0,.48);
+  display:none;
+  align-items:flex-start;
+  justify-content:flex-end;
+  padding:12px;
+}
+
+.settings-overlay.open {
+  display:flex;
+}
+
+.settings-panel {
+  width:min(410px,100%);
+  max-height:calc(100dvh - 24px);
+  overflow-y:auto;
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:17px;
+  box-shadow:var(--shadow);
+  padding:17px;
+  animation:settingsIn .18s ease;
+}
+
+@keyframes settingsIn {
+  from {
+    opacity:0;
+    transform:translateY(-8px);
+  }
+  to {
+    opacity:1;
+    transform:translateY(0);
+  }
+}
+
+.settings-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:18px;
+}
+
+.settings-header h3 {
+  margin:0;
+  font-size:17px;
+}
+
+.section {
+  padding:15px 0;
+  border-top:1px solid var(--border);
+}
+
+.section h4 {
+  margin:0 0 7px;
+  font-size:14px;
+}
+
+.section p {
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.5;
+  margin:5px 0 12px;
+}
+
+.field {
+  width:100%;
+  padding:12px;
+  border:1px solid var(--border);
+  border-radius:11px;
+  background:var(--bg);
+  color:var(--text);
+  outline:none;
+  margin:5px 0 10px;
+}
+
+.theme-options {
+  display:flex;
+  gap:8px;
+}
+
+.theme-option {
+  flex:1;
+  padding:11px;
+  background:var(--panel2);
+  color:var(--text);
+  border:1px solid var(--border);
+  border-radius:11px;
+}
+
+.theme-option.active {
+  border-color:var(--accent);
+  color:var(--accent);
+}
+
+.draft-empty {
+  padding:13px;
+  background:var(--panel2);
+  border-radius:11px;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.5;
+}
+
+.auth-box {
+  padding:14px;
+  background:var(--panel2);
+  border-radius:12px;
+}
+
+.auth-box button {
+  width:100%;
+}
+
+.status {
+  color:var(--muted);
+  font-size:11px;
+  text-align:center;
+  padding:6px;
+  min-height:20px;
+}
+
+.hidden {
+  display:none !important;
+}
+
+@media (min-width:760px) {
+  .header {
+    padding:0 24px;
+  }
+
+  .messages {
+    padding:35px 35px 45px;
+  }
+
+  .composer-wrap {
+    padding:13px 25px 16px;
+  }
+
+  .bubble {
+    font-size:15.5px;
+  }
+}
+
+@media (max-width:420px) {
+  .header {
+    height:56px;
+    min-height:56px;
+    padding:0 10px;
+  }
+
+  .header-title {
+    font-size:15px;
+  }
+
+  .messages {
+    padding:18px 13px 25px;
+  }
+
+  .composer-wrap {
+    padding:8px 9px 10px;
+  }
+
+  .bubble {
+    max-width:91%;
+    font-size:14.5px;
+  }
+
+  .settings-overlay {
+    padding:8px;
+  }
+
+  .settings-panel {
+    max-height:calc(100dvh - 16px);
+  }
+}
+  
+/* Markdown spacing */
+.bubble p {
+  margin: 0 0 0.45em;
+  line-height: 1.55;
+}
+
+.bubble p:last-child {
+  margin-bottom: 0;
+}
+
+.bubble h1,
+.bubble h2,
+.bubble h3,
+.bubble h4 {
+  margin: 0.9em 0 0.4em;
+  line-height: 1.3;
+}
+
+.bubble ul,
+.bubble ol {
+  margin: 0.35em 0 0.65em;
+  padding-left: 1.5em;
+}
+
+.bubble li {
+  margin: 0.2em 0;
+}
+
+/* Markdown code blocks */
+
+.bubble pre {
+  margin: 12px 0;
+  padding: 14px;
+  border-radius: 10px;
+  background: #171b26;
+  color: #e6edf3;
+  overflow-x: auto;
+  max-width: 100%;
+  white-space: pre;
+  line-height: 1.5;
+  font-size: 13px;
+}
+
+.bubble pre code {
+  display: block;
+  font-family: Consolas, Monaco, monospace;
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.bubble :not(pre) > code {
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--panel2);
+  font-family: Consolas, Monaco, monospace;
+  font-size: 0.9em;
+}
+
+.bubble pre:last-child {
+  margin-bottom: 0;
+}
+
+.code-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 7px 10px;
+  background: #252b38;
+  border-radius: 9px 9px 0 0;
+}
+/* MESSAGE COPY BUTTON */
+.message-actions {
+  display: flex;
+  align-items: center;
+  margin-top: 6px;
+  padding: 0 4px;
+}
+
+.copy-message-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.copy-message-btn:hover {
+  background: var(--panel2);
+  color: var(--text);
+}
+
+.copy-message-btn:active {
+  transform: scale(0.96);
+}
+
+.copy-message-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.code-toolbar + pre {
+  margin-top: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.code-action-btn {
+  border: 1px solid #596273;
+  background: transparent;
+  color: #e6edf3;
+  padding: 5px 11px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.code-action-btn:hover {
+  background: #3a4353;
+}
+
+/* RICH TEXT COMPOSER */
+
+.composer-editor-wrap {
+  max-width: 900px;
+  margin: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 9px 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+}
+
+.format-toolbar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* FEATURE MENU */
+
+.composer-editor-wrap {
+  position: relative;
+}
+
+.feature-menu-button {
+  font-size: 22px !important;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.feature-menu-panel {
+  position: absolute;
+  left: 10px;
+  bottom: calc(100% + 12px);
+  width: min(300px, calc(100vw - 40px));
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.22);
+  z-index: 1000;
+}
+
+.feature-menu-panel.hidden {
+  display: none;
+}
+
+.feature-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.feature-menu-header button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 23px;
+  cursor: pointer;
+}
+
+.feature-menu-items {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.feature-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 48px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel2);
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.feature-menu-item:hover {
+  background: var(--bg);
+}
+
+.feature-menu-item span:first-child {
+  font-size: 19px;
+}
+
+.format-toolbar button {
+  min-width: 34px;
+  height: 32px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.format-toolbar button:hover {
+  background: var(--panel2);
+}
+
+.rich-editor {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  max-height: 160px;
+  overflow-y: auto;
+  outline: none;
+  padding: 10px 4px;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.rich-editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.rich-editor h2 {
+  font-size: 1.3em;
+  margin: 8px 0;
+}
+
+.rich-editor pre {
+  padding: 10px;
+  background: var(--panel2);
+  border-radius: 8px;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.rich-editor ul,
+.rich-editor ol {
+  padding-left: 24px;
+}
+
+.rich-editor code {
+  font-family: monospace;
+  background: var(--panel2);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.composer-editor-wrap .send-btn {
+  flex-shrink: 0;
+}
+
+#messageInput {
+  display: none;
+}
+/* CONVERSATION ACTION BUTTONS */
+.conversation-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+}
+
+.edit-conversation-btn,
+.delete-conversation-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s,
+              transform 0.15s;
+}
+
+/* EDIT BUTTON */
+.edit-conversation-btn:hover {
+  background: var(--panel2);
+  color: var(--text);
+}
+
+/* DELETE BUTTON */
+.delete-conversation-btn {
+  color: #dc7777;
+}
+
+.delete-conversation-btn:hover {
+  background: rgba(220, 80, 80, 0.12);
+  color: #ff5555;
+}
+
+/* CLICK EFFECT */
+.edit-conversation-btn:active,
+.delete-conversation-btn:active {
+  transform: scale(0.92);
+}
+
+/* KEYBOARD FOCUS */
+.edit-conversation-btn:focus-visible,
+.delete-conversation-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+  /* IMAGE PREVIEW */
+
+.image-preview-area {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  flex: 0 0 100%;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  padding: 8px 2px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+}
+
+.image-preview-area.hidden {
+  display: none;
+}
+
+.image-preview-item {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  flex: 0 0 76px;
+}
+
+.image-preview-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.remove-preview-image {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 23px;
+  height: 23px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+</style>
+  
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css"
+>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+
+</head>
+
+<body>
+
+<div class="app">
+
+  <!-- HEADER -->
+
+  <header class="header">
+
+    <div class="header-left">
+      <button class="icon-btn"
+        id="openDrawer"
+        aria-label="Open conversations">
+        <svg viewBox="0 0 24 24">
+          <rect x="3" y="4" width="18" height="16" rx="2"/>
+          <path d="M9 4v16"/>
+        </svg>
+      </button>
+
+      <div class="header-title">
+        Daneel Giskard
+      </div>
+    </div>
+
+    <div class="header-right">
+      <button class="icon-btn"
+        id="openSettings"
+        aria-label="Settings">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.7 1.7-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2h-2.4v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1L8 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H6.7v-2.4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9L8 8.6l1.7-1.7.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5v-.2h2.4v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.7 1.7-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.2V14h-.2a1.7 1.7 0 0 0-1.5 1z"/>
+        </svg>
+      </button>
+    </div>
+
+  </header>
+
+
+  <!-- CHAT AREA -->
+
+  <main class="chat-area" id="chatArea">
+
+    <div class="messages" id="messages">
+
+      <div class="welcome" id="welcome">
+        <div class="welcome-logo">✦</div>
+        <h2 id="welcomeTitle">Hello!</h2>
+        <p>
+          Ako si Daneel Giskard.
+          Ano ang gusto mong pag-usapan natin ngayon?
+        </p>
+      </div>
+
+    </div>
+
+  </main>
+
+
+  
+
+<!-- COMPOSER -->
+
+<footer class="composer-wrap">
+
+  <div class="composer-editor-wrap">
+
+    <!-- FORMAT TOOLBAR -->
+    <div class="format-toolbar">
+
+      <!-- FUTURE FEATURES BUTTON -->
+      <button
+        type="button"
+        id="featureMenuButton"
+        class="feature-menu-button"
+        title="More features"
+        aria-label="More features"
+        aria-expanded="false"
+        aria-controls="featureMenuPanel">
+        +
+      </button>
+
+      <!-- RICH TEXT CONTROLS -->
+      <button type="button" data-command="bold" title="Bold">
+        <b>B</b>
+      </button>
+
+      <button type="button" data-command="italic" title="Italic">
+        <i>I</i>
+      </button>
+
+      <button type="button" data-command="formatBlock" data-value="H2" title="Heading">
+        H
+      </button>
+
+      <button type="button" data-command="insertUnorderedList" title="Bullet list">
+        •≡
+      </button>
+
+      <button type="button" data-command="insertOrderedList" title="Numbered list">
+        1.
+      </button>
+
+      <button type="button" data-command="formatBlock" data-value="PRE" title="Code block">
+        &lt;/&gt;
+      </button>
+
+      <button type="button" data-command="formatBlock" data-value="P" title="Normal paragraph">
+        ¶
+      </button>
+
+    </div>
+
+    <!-- FLOATING FEATURE PANEL -->
+    <div
+      id="featureMenuPanel"
+      class="feature-menu-panel hidden"
+      aria-label="Additional features">
+
+      <div class="feature-menu-header">
+        <span>More features</span>
+
+        <button
+          type="button"
+          id="closeFeatureMenu"
+          aria-label="Close menu">
+          ×
+        </button>
+      </div>
+
+      <div class="feature-menu-items">
+
+        <button type="button" class="feature-menu-item" data-feature="image">
+          <span>🖼️</span>
+          <span>Images</span>
+        </button>
+
+        <button type="button" class="feature-menu-item" data-feature="files">
+          <span>📎</span>
+          <span>Files</span>
+        </button>
+
+        <button type="button" class="feature-menu-item" data-feature="research">
+          <span>🌐</span>
+          <span>Research</span>
+        </button>
+
+        <button type="button" class="feature-menu-item" data-feature="tools">
+          <span>🛠️</span>
+          <span>Tools</span>
+        </button>
+
+      </div>
+    </div>
+    
+<!-- IMAGE FILE PICKER -->
+<input
+  type="file"
+  id="imageFileInput"
+  accept="image/*"
+  multiple
+  hidden
+/>
+<!-- SELECTED IMAGE PREVIEWS -->
+<div
+  id="imagePreviewArea"
+  class="image-preview-area hidden">
+</div>
+    <!-- MESSAGE EDITOR -->
+    <div
+      id="richMessageInput"
+      class="rich-editor"
+      contenteditable="true"
+      data-placeholder="Message Daneel..."
+      aria-label="Message Daneel"
+      role="textbox"
+      aria-multiline="true">
+    </div>
+
+    <textarea id="messageInput" hidden></textarea>
+
+    <!-- SEND BUTTON -->
+    <button
+      class="send-btn"
+      id="sendButton"
+      aria-label="Send message">
+      ➤
+    </button>
+
+  </div>
+
+  <div class="composer-note">
+    Daneel Giskard v2
+  </div>
+
+  <div class="status" id="status"></div>
+
+</footer>
+</div>
+
+<!-- CONVERSATION DRAWER -->
+
+<div class="overlay" id="drawerOverlay">
+
+  <aside class="drawer">
+
+    <div class="drawer-header">
+      <div class="drawer-heading">
+        Conversations
+      </div>
+
+      <button class="icon-btn"
+        id="closeDrawer"
+        aria-label="Close drawer">
+        ✕
+      </button>
+    </div>
+
+    <div class="drawer-actions">
+      <button class="primary-btn" id="newChatButton">
+        ＋ New conversation
+      </button>
+    </div>
+
+    <input
+      class="search-box"
+      id="conversationSearch"
+      placeholder="Search conversations...">
+
+    <div class="conversation-list"
+      id="conversationList">
+    </div>
+
+    <div class="drawer-footer">
+
+      <div class="account-info" id="accountInfo">
+        Not signed in
+      </div>
+
+      <button class="signout-btn hidden"
+        id="signOutButton">
+        Sign out
+      </button>
+
+    </div>
+
+  </aside>
+
+</div>
+
+
+<!-- SETTINGS PANEL -->
+
+<div class="settings-overlay" id="settingsOverlay">
+
+  <section class="settings-panel">
+
+    <div class="settings-header">
+
+      <h3>Settings</h3>
+
+      <button class="icon-btn"
+        id="closeSettings">
+        ✕
+      </button>
+
+    </div>
+
+
+    <!-- AUTHENTICATION -->
+
+    <div class="section" id="authSection">
+
+      <h4>Account</h4>
+
+      <div class="auth-box" id="signedOutBox">
+
+        <p>
+          Sign in para magamit ang iyong Daneel account.
+        </p>
+
+        <button class="primary-btn"
+          id="signInButton">
+          Continue with Google
+        </button>
+
+      </div>
+
+      <div id="signedInBox" class="hidden">
+
+        <p id="signedInEmail"></p>
+
+      </div>
+
+    </div>
+
+
+    <!-- PREFERRED NAME -->
+
+    <div class="section">
+
+      <h4>Preferred name</h4>
+
+      <p>
+        Ano ang gusto mong itawag sa iyo ni Daneel?
+      </p>
+
+      <input
+        class="field"
+        id="preferredName"
+        maxlength="60"
+        placeholder="Your preferred name">
+
+      <button class="primary-btn"
+        id="saveNameButton">
+        Save
+      </button>
+
+      <div class="status" id="nameStatus"></div>
+
+    </div>
+
+
+    <!-- LEARNING DRAFTS -->
+
+    <div class="section">
+
+      <h4>Learning Library</h4>
+
+      <p>
+        Suriin at aprubahan ang mga learning drafts
+        bago idagdag sa kaalaman ni Daneel.
+      </p>
+
+      <div class="draft-empty" id="draftContainer">
+        Learning Draft approval interface will be
+        connected to the backend.
+      </div>
+
+    </div>
+
+
+    <!-- APPEARANCE -->
+
+    <div class="section">
+
+      <h4>Appearance</h4>
+
+      <p>Piliin ang gusto mong theme.</p>
+
+      <div class="theme-options">
+
+        <button class="theme-option"
+          id="darkThemeButton">
+          ☾ Dark
+        </button>
+
+        <button class="theme-option"
+          id="lightThemeButton">
+          ☀ Light
+        </button>
+
+      </div>
+
+    </div>
+
+  </section>
+
+</div>
+
+
+<!-- FIREBASE AND APPLICATION LOGIC -->
+
+<script type="module">
+
+import {
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+
+import { marked } from "https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js";
+
+import DOMPurify from "https://cdn.jsdelivr.net/npm/dompurify@3.3.0/+esm";
+
+import TurndownService from "https://cdn.jsdelivr.net/npm/turndown@7.2.0/+esm";
+
+const turndownService = new TurndownService({
+  codeBlockStyle: "fenced",
+  headingStyle: "atx"
+});
+// ==========================================
+// 1. CONFIGURATION
+// ==========================================
+
+// Replace these values with your saved Firebase config.
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAiHhbZO2_5jLtoJvc1uKVSvuYBVzZaFJ0",
+  authDomain: "daneel-giskard-v2.firebaseapp.com",
+  projectId: "daneel-giskard-v2",
+  storageBucket: "daneel-giskard-v2.firebasestorage.app",
+  messagingSenderId: "777448763795",
+  appId: "1:777448763795:web:71520baf2c62945ddaf866"
+};
+
+
+// Replace this when your Render service is deployed.
+
+const API_BASE_URL =
+  "https://daneel-giskard-v2.onrender.com";
+
+// ==========================================
+// FIRESTORE API HELPER
+// ==========================================
+
+async function firestoreRequest(
+  endpoint,
+  options = {}
+) {
+
+  if (!currentUser) {
+    throw new Error("User is not signed in.");
+  }
+
+  const token = await currentUser.getIdToken();
+
+  const response = await fetch(
+    API_BASE_URL + endpoint,
+    {
+      ...options,
+
+      headers: {
+        ...(options.headers || {}),
+        "Authorization": "Bearer " + token,
+        "Content-Type": "application/json"
+      }
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok || !data.ok) {
+    throw new Error(
+      data.error || "Firestore request failed."
+    );
+  }
+
+  return data;
+
+}
+  
+// ==========================================
+// LOAD CONVERSATIONS FROM FIRESTORE
+// ==========================================
+
+async function loadFirestoreConversations() {
+
+  const data = await firestoreRequest(
+    "/conversations"
+  );
+
+  if (!Array.isArray(data.conversations)) {
+    throw new Error(
+      "Invalid conversations data received."
+    );
+  }
+
+  return data.conversations;
+
+}
+  
+async function loadConversationsFromCloud() {
+  if (!currentUser) {
+    throw new Error("User is not signed in.");
+  }
+
+  const ownerUid = currentUser.uid;
+
+  const cloudConversations =
+    await loadFirestoreConversations();
+
+  // Make sure the same user is still signed in.
+  if (!currentUser || currentUser.uid !== ownerUid) {
+    return;
+  }
+
+  conversations = cloudConversations;
+
+  // Preserve the active conversation if it still exists.
+  const activeExists = conversations.some(
+    item => item.id === activeConversationId
+  );
+
+  if (!activeExists) {
+    const sorted = [...conversations].sort(
+      (a, b) =>
+        Number(b.pinned) - Number(a.pinned) ||
+        b.updatedAt - a.updatedAt
+    );
+
+    activeConversationId =
+      sorted.length > 0 ? sorted[0].id : null;
+  }
+
+  saveLocalData();
+  renderConversationList();
+  renderMessages();
+}
+
+// ==========================================
+// SAVE CONVERSATION TO FIRESTORE
+// ==========================================
+
+async function saveFirestoreConversation(conversation) {
+
+  if (!conversation || !conversation.id) {
+    throw new Error("Invalid conversation.");
+  }
+
+  const conversationData = {
+    title: conversation.title,
+    pinned: conversation.pinned,
+    updatedAt: conversation.updatedAt,
+
+    messages: conversation.messages.map(item => ({
+      role: item.role,
+      content: item.content
+    }))
+  };
+
+  const data = await firestoreRequest(
+    "/conversations/" +
+    encodeURIComponent(conversation.id),
+    {
+      method: "PUT",
+
+      body: JSON.stringify(conversationData)
+    }
+  );
+
+  return data;
+
+}
+  
+// ==========================================
+// DELETE CONVERSATION FROM FIRESTORE
+// ==========================================
+
+async function deleteFirestoreConversation(conversationId) {
+
+  if (!conversationId) {
+    throw new Error("Invalid conversation ID.");
+  }
+
+  if (!currentUser) {
+    throw new Error("User is not signed in.");
+  }
+
+  const ownerUid = currentUser.uid;
+  const queueKey = ownerUid + "_" + conversationId;
+
+  // Wait for pending saves before deleting.
+  const pendingSave =
+    firestoreSaveQueues.get(queueKey);
+
+  if (pendingSave) {
+    await pendingSave.catch(() => {});
+  }
+
+  // Make sure the same user is still signed in.
+  if (
+    !currentUser ||
+    currentUser.uid !== ownerUid
+  ) {
+    throw new Error("User changed before deletion.");
+  }
+
+  return await firestoreRequest(
+    "/conversations/" +
+    encodeURIComponent(conversationId),
+    {
+      method: "DELETE"
+    }
+  );
+
+}
+// ==========================================
+// QUEUE FIRESTORE SAVES
+// ==========================================
+
+function queueFirestoreSave(conversation) {
+
+  if (!currentUser) {
+    return Promise.resolve(null);
+  }
+
+  if (!conversation || !conversation.id) {
+    return Promise.reject(
+      new Error("Invalid conversation.")
+    );
+  }
+
+  const ownerUid = currentUser.uid;
+  const conversationId = conversation.id;
+  const queueKey = ownerUid + "_" + conversationId;
+
+  // Capture a snapshot so later changes
+  // cannot alter an already queued save.
+  const snapshot = JSON.parse(
+    JSON.stringify(conversation)
+  );
+
+  const previousSave =
+    firestoreSaveQueues.get(queueKey) ||
+    Promise.resolve();
+
+  const currentSave = previousSave
+    .catch(() => {
+      // Allow the next save even if
+      // the previous save failed.
+    })
+    .then(() => {
+
+      // Prevent saving under another account.
+      if (
+        !currentUser ||
+        currentUser.uid !== ownerUid
+      ) {
+        throw new Error(
+          "User changed before Firestore save."
+        );
+      }
+
+      return saveFirestoreConversation(snapshot);
+
+    });
+
+  firestoreSaveQueues.set(
+    queueKey,
+    currentSave
+  );
+
+  // Remove completed queue without
+  // accidentally removing a newer request.
+  currentSave.then(
+    () => {
+      if (
+        firestoreSaveQueues.get(queueKey) === currentSave
+      ) {
+        firestoreSaveQueues.delete(queueKey);
+      }
+    },
+    () => {
+      if (
+        firestoreSaveQueues.get(queueKey) === currentSave
+      ) {
+        firestoreSaveQueues.delete(queueKey);
+      }
+    }
+  );
+
+  return currentSave;
+
+}
+  
+// ==========================================
+// 2. FIREBASE INITIALIZATION
+// ==========================================
+
+const firebaseApp =
+  initializeApp(firebaseConfig);
+
+const auth = getAuth(firebaseApp);
+
+const googleProvider =
+  new GoogleAuthProvider();
+
+let currentUser = null;
+
+
+// ==========================================
+// 3. APPLICATION STATE
+// ==========================================
+
+let conversations = [];
+let activeConversationId = null;
+let isSending = false;
+// Track pending Firestore saves
+const firestoreSaveQueues = new Map();
+
+const STORAGE_PREFIX = "daneel_v2_";
+
+function storageKey(name) {
+  return STORAGE_PREFIX +
+    (currentUser?.uid || "guest") +
+    "_" + name;
+}
+
+async function testFirestoreDelete() {
+
+  if (!currentUser) return;
+
+  const testId = "firestore-write-test";
+
+  try {
+
+    const token = await currentUser.getIdToken();
+
+    // 1. Delete test document
+    const deleteResponse = await fetch(
+      API_BASE_URL +
+      "/conversations/" +
+      encodeURIComponent(testId),
+      {
+        method: "DELETE",
+        headers: {
+          "Authorization": "Bearer " + token
+        }
+      }
+    );
+
+    const deleteData = await deleteResponse.json();
+
+    if (!deleteResponse.ok || !deleteData.ok) {
+      throw new Error(
+        deleteData.error || "Firestore delete failed."
+      );
+    }
+
+    // 2. Verify deletion
+    const readResponse = await fetch(
+      API_BASE_URL + "/conversations",
+      {
+        headers: {
+          "Authorization": "Bearer " + token
+        }
+      }
+    );
+
+    const readData = await readResponse.json();
+
+    if (!readResponse.ok || !readData.ok) {
+      throw new Error(
+        readData.error || "Firestore verification failed."
+      );
+    }
+
+    const stillExists = readData.conversations.some(
+      item => item.id === testId
+    );
+
+    if (stillExists) {
+      throw new Error(
+        "Test document still exists."
+      );
+    }
+
+    showStatus(
+      "Firestore delete successful! Document removed and verified."
+    );
+
+  } catch (error) {
+
+    showStatus(
+      "Firestore delete test failed: " + error.message
+    );
+
+  }
+
+}
+
+async function testFirestoreWrite() {
+
+  if (!currentUser) return;
+
+  const testId = "firestore-write-test";
+
+  try {
+
+    const token = await currentUser.getIdToken();
+
+    // 1. Write test document
+    const saveResponse = await fetch(
+      API_BASE_URL +
+      "/conversations/" +
+      encodeURIComponent(testId),
+      {
+        method: "PUT",
+
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+
+        body: JSON.stringify({
+          title: "Firestore Write Test",
+          pinned: false,
+          updatedAt: Date.now(),
+          messages: [
+            {
+              role: "user",
+              content: "Testing Firestore write."
+            }
+          ]
+        })
+      }
+    );
+
+    const saveData = await saveResponse.json();
+
+    if (!saveResponse.ok || !saveData.ok) {
+      throw new Error(
+        saveData.error || "Firestore write failed."
+      );
+    }
+
+    // 2. Read back and verify
+    const readResponse = await fetch(
+      API_BASE_URL + "/conversations",
+      {
+        headers: {
+          "Authorization": "Bearer " + token
+        }
+      }
+    );
+
+    const readData = await readResponse.json();
+
+    if (!readResponse.ok || !readData.ok) {
+      throw new Error(
+        readData.error || "Firestore verification failed."
+      );
+    }
+
+    const found = readData.conversations.some(
+      item => item.id === testId &&
+              item.title === "Firestore Write Test"
+    );
+
+    if (!found) {
+      throw new Error(
+        "Test document was not found after saving."
+      );
+    }
+
+    showStatus(
+      "Firestore write successful! Test document verified."
+    );
+
+  } catch (error) {
+
+    showStatus(
+      "Firestore write test failed: " + error.message
+    );
+
+  }
+
+}
+
+async function testFirestoreRead() {
+
+  if (!currentUser) return;
+
+  try {
+
+    const token = await currentUser.getIdToken();
+
+    const response = await fetch(
+      API_BASE_URL + "/conversations",
+      {
+        method: "GET",
+        headers: {
+          "Authorization": "Bearer " + token
+        }
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      throw new Error(
+        data.error || "Firestore read failed."
+      );
+    }
+
+    showStatus(
+      "Firestore connected! " +
+      data.conversations.length +
+      " conversations found."
+    );
+
+  } catch (error) {
+
+    showStatus(
+      "Firestore test failed: " + error.message
+    );
+
+  }
+
+}
+  
+function saveLocalData() {
+
+  if (!currentUser) return;
+
+  localStorage.setItem(
+    storageKey("conversations"),
+    JSON.stringify(conversations)
+  );
+
+}
+
+function loadLocalData() {
+
+  if (!currentUser) return;
+
+  try {
+
+    conversations = JSON.parse(
+      localStorage.getItem(
+        storageKey("conversations")
+      ) || "[]"
+    );
+
+  } catch {
+    conversations = [];
+  }
+
+  renderConversationList();
+
+}
+
+
+// ==========================================
+// 4. DOM HELPERS
+// ==========================================
+
+const $ = id => document.getElementById(id);
+
+function showStatus(message) {
+  $("status").textContent = message || "";
+}
+
+function escapeHTML(value) {
+
+  return String(value).replace(
+    /[&<>"']/g,
+    char => ({
+      "&":"&amp;",
+      "<":"&lt;",
+      ">":"&gt;",
+      '"':"&quot;",
+      "'":"&#39;"
+    })[char]
+  );
+
+}
+
+function createId() {
+  return (
+    Date.now().toString(36) +
+    Math.random().toString(36).slice(2,8)
+  );
+}
+
+
+// ==========================================
+// 5. THEME
+// ==========================================
+
+function applyTheme(theme) {
+
+  document.body.classList.toggle(
+    "light",
+    theme === "light"
+  );
+
+  localStorage.setItem(
+    storageKey("theme"),
+    theme
+  );
+
+  $("darkThemeButton").classList.toggle(
+    "active",
+    theme === "dark"
+  );
+
+  $("lightThemeButton").classList.toggle(
+    "active",
+    theme === "light"
+  );
+
+}
+
+function loadTheme() {
+
+  const saved = localStorage.getItem(
+    storageKey("theme")
+  ) || "dark";
+
+  applyTheme(saved);
+
+}
+
+$("darkThemeButton").onclick = () =>
+  applyTheme("dark");
+
+$("lightThemeButton").onclick = () =>
+  applyTheme("light");
+
+
+// ==========================================
+// 6. DRAWER AND SETTINGS
+// ==========================================
+
+function openDrawer() {
+  $("drawerOverlay").classList.add("open");
+}
+
+function closeDrawer() {
+  $("drawerOverlay").classList.remove("open");
+}
+
+function openSettings() {
+  $("settingsOverlay").classList.add("open");
+}
+
+function closeSettings() {
+  $("settingsOverlay").classList.remove("open");
+}
+
+$("openDrawer").onclick = openDrawer;
+$("closeDrawer").onclick = closeDrawer;
+
+$("openSettings").onclick = openSettings;
+$("closeSettings").onclick = closeSettings;
+
+$("drawerOverlay").onclick = event => {
+
+  if (event.target === $("drawerOverlay")) {
+    closeDrawer();
+  }
+
+};
+
+$("settingsOverlay").onclick = event => {
+
+  if (event.target === $("settingsOverlay")) {
+    closeSettings();
+  }
+
+};
+
+document.addEventListener("keydown", event => {
+
+  if (event.key === "Escape") {
+    closeDrawer();
+    closeSettings();
+  }
+
+});
+
+
+// ==========================================
+// 7. AUTHENTICATION
+// ==========================================
+
+$("signInButton").onclick = async () => {
+
+  try {
+
+    await signInWithPopup(
+      auth,
+      googleProvider
+    );
+
+    closeSettings();
+
+  } catch (error) {
+
+    alert(
+      "Sign-in failed: " + error.message
+    );
+
+  }
+
+};
+
+
+$("signOutButton").onclick = async () => {
+
+  if (!confirm("Sign out of Daneel Giskard?")) {
+    return;
+  }
+
+  await signOut(auth);
+
+  closeDrawer();
+
+};
+
+
+
+onAuthStateChanged(auth, async user => {
+
+  currentUser = user;
+
+  if (user) {
+
+    $("signedOutBox").classList.add("hidden");
+    $("signedInBox").classList.remove("hidden");
+
+    $("signedInEmail").textContent =
+      user.email || "Signed in";
+
+    $("accountInfo").textContent =
+      user.displayName || user.email || "Signed in";
+
+    $("signOutButton").classList.remove("hidden");
+
+    loadTheme();
+    loadPreferredName();
+
+    try {
+
+      await loadConversationsFromCloud();
+
+      if (!currentUser || currentUser.uid !== user.uid) {
+        return;
+      }
+
+      showStatus("Conversations loaded from cloud.");
+
+    } catch (error) {
+
+      console.error("Cloud loading failed:", error);
+
+      if (!currentUser || currentUser.uid !== user.uid) {
+        return;
+      }
+
+      showStatus(
+        "Unable to load conversations: " + error.message
+      );
+
+    }
+
+  } else {
+
+    $("signedOutBox").classList.remove("hidden");
+    $("signedInBox").classList.add("hidden");
+
+    $("accountInfo").textContent = "Not signed in";
+
+    $("signOutButton").classList.add("hidden");
+
+    conversations = [];
+    activeConversationId = null;
+
+    loadTheme();
+    showWelcome();
+
+  }
+
+});
+
+
+
+// ==========================================
+// 8. PREFERRED NAME
+// ==========================================
+
+function loadPreferredName() {
+
+  const saved = localStorage.getItem(
+    storageKey("preferredName")
+  ) || "";
+
+  $("preferredName").value = saved;
+
+  $("welcomeTitle").textContent =
+    saved ? "Hello, " + saved + "!" : "Hello!";
+
+}
+
+$("saveNameButton").onclick = () => {
+
+  if (!currentUser) {
+    $("nameStatus").textContent =
+      "Please sign in first.";
+    return;
+  }
+
+  const name = $("preferredName").value.trim();
+
+  localStorage.setItem(
+    storageKey("preferredName"),
+    name
+  );
+
+  $("welcomeTitle").textContent =
+    name ? "Hello, " + name + "!" : "Hello!";
+
+  $("nameStatus").textContent = "Saved locally.";
+
+};
+
+
+// ==========================================
+// 9. CONVERSATION MANAGEMENT
+// ==========================================
+
+function createConversation() {
+
+  const conversation = {
+    id: createId(),
+    title: "New conversation",
+    pinned: false,
+    updatedAt: Date.now(),
+    messages: []
+  };
+
+  conversations.unshift(conversation);
+
+  activeConversationId = conversation.id;
+
+  saveLocalData();
+
+queueFirestoreSave(conversation).catch(error => {
+
+  showStatus(
+    "Local copy saved, but cloud sync failed: " +
+    error.message
+  );
+
+});
+
+renderConversationList();
+renderMessages();
+
+  closeDrawer();
+
+  $("messageInput").focus();
+
+  return conversation;
+
+}
+
+
+function getActiveConversation() {
+
+  return conversations.find(
+    item => item.id === activeConversationId
+  );
+
+}
+
+
+function renderConversationList() {
+
+  const query =
+    $("conversationSearch").value
+      .trim()
+      .toLowerCase();
+
+  const sorted = [...conversations].sort(
+    (a,b) => {
+
+      if (a.pinned !== b.pinned) {
+        return a.pinned ? -1 : 1;
+      }
+
+      return b.updatedAt - a.updatedAt;
+
+    }
+  );
+
+  const filtered = sorted.filter(
+    item => item.title.toLowerCase().includes(query)
+  );
+
+  const pinned = filtered.filter(item => item.pinned);
+  const recent = filtered.filter(item => !item.pinned);
+
+  let html = "";
+
+  if (pinned.length) {
+
+    html += `<div class="list-label">Pinned</div>`;
+
+    pinned.forEach(item => {
+      html += conversationItemHTML(item);
+    });
+
+  }
+
+  if (recent.length) {
+
+    html += `<div class="list-label">Recent</div>`;
+
+    recent.forEach(item => {
+      html += conversationItemHTML(item);
+    });
+
+  }
+
+  if (!filtered.length) {
+
+    html = `
+      <div class="list-label">
+        No conversations found
+      </div>
+    `;
+
+  }
+
+  $("conversationList").innerHTML = html;
+
+}
+
+
+function conversationItemHTML(item) {
+
+  return `
+    <div class="conversation-item
+      ${item.id === activeConversationId ? "active" : ""}">
+
+      <button class="conversation-select"
+        data-open="${escapeHTML(item.id)}">
+
+        <div class="conversation-name">
+          ${escapeHTML(item.title)}
+        </div>
+
+        <div class="conversation-date">
+          ${new Date(item.updatedAt).toLocaleString()}
+        </div>
+
+      </button>
+
+      <div class="conversation-actions">
+
+        <button class="pin-btn
+          ${item.pinned ? "pinned" : ""}"
+          data-pin="${escapeHTML(item.id)}"
+          title="Pin conversation">
+          ${item.pinned ? "★" : "☆"}
+        </button>
+
+        <button class="edit-conversation-btn"
+          data-edit="${escapeHTML(item.id)}"
+          title="Edit title">
+          ✎
+        </button>
+
+        <button class="delete-conversation-btn"
+          data-delete="${escapeHTML(item.id)}"
+          title="Delete conversation">
+          🗑
+        </button>
+
+      </div>
+
+    </div>
+  `;
+
+}
+
+
+$("conversationList").addEventListener(
+  "click",
+  event => {
+
+    const openButton =
+      event.target.closest("[data-open]");
+
+    const pinButton =
+      event.target.closest("[data-pin]");
+   
+    const editButton =
+      event.target.closest("[data-edit]");
+
+    const deleteButton =
+      event.target.closest("[data-delete]");
+
+    if (openButton) {
+
+      activeConversationId =
+        openButton.dataset.open;
+
+      renderConversationList();
+      renderMessages();
+      closeDrawer();
+
+    }
+
+    if (pinButton) {
+
+      const conversation =
+        conversations.find(
+          item => item.id === pinButton.dataset.pin
+        );
+
+      if (conversation) {
+
+        conversation.pinned =
+  !conversation.pinned;
+
+conversation.updatedAt = Date.now();
+
+saveLocalData();
+
+queueFirestoreSave(conversation).catch(error => {
+
+  showStatus(
+    "Local copy saved, but cloud sync failed: " +
+    error.message
+  );
+
+});
+
+renderConversationList();
+
+      }
+
+    }
+    if (editButton) {
+
+  const conversation =
+    conversations.find(
+      item => item.id === editButton.dataset.edit
+    );
+
+  if (conversation) {
+
+    const newTitle = prompt(
+      "Enter new conversation title:",
+      conversation.title
+    );
+
+    if (newTitle !== null) {
+
+      const cleanTitle = newTitle.trim();
+
+      if (!cleanTitle) {
+
+        alert("Conversation title cannot be empty.");
+
+        return;
+
+      }
+
+      conversation.title = cleanTitle;
+conversation.updatedAt = Date.now();
+
+saveLocalData();
+
+queueFirestoreSave(conversation).catch(error => {
+
+  showStatus(
+    "Local copy saved, but cloud sync failed: " +
+    error.message
+  );
+
+});
+
+renderConversationList();
+
+    }
+
+  }
+
+}
+    if (deleteButton) {
+  const conversationId = deleteButton.dataset.delete;
+
+  const index = conversations.findIndex(
+    item => item.id === conversationId
+  );
+
+  if (index === -1) return;
+
+  const conversation = conversations[index];
+
+  const confirmed = confirm(
+    `Delete "${conversation.title}"?\n\nThis cannot be undone.`
+  );
+
+  if (!confirmed) return;
+
+  if (deleteButton) {
+
+  const conversationId =
+    deleteButton.dataset.delete;
+
+  const index = conversations.findIndex(
+    item => item.id === conversationId
+  );
+
+  if (index === -1) return;
+
+  const conversation = conversations[index];
+
+  const confirmed = confirm(
+    `Delete "${conversation.title}"?\n\nThis cannot be undone.`
+  );
+
+  if (!confirmed) return;
+
+  // Remove from local conversations
+  conversations.splice(index, 1);
+
+  // Select another conversation if needed
+  if (activeConversationId === conversationId) {
+
+    const sorted = [...conversations].sort((a, b) => {
+
+      if (a.pinned !== b.pinned) {
+        return a.pinned ? -1 : 1;
+      }
+
+      return b.updatedAt - a.updatedAt;
+
+    });
+
+    activeConversationId = sorted.length
+      ? sorted[0].id
+      : null;
+
+  }
+
+  // Save local changes
+  saveLocalData();
+
+  renderConversationList();
+  renderMessages();
+
+  // Delete from Firestore
+  deleteFirestoreConversation(
+    conversationId
+  ).then(() => {
+
+    showStatus("Conversation deleted from cloud.");
+
+  }).catch(error => {
+
+    showStatus(
+      "Deleted locally, but cloud deletion failed: " +
+      error.message
+    );
+
+  });
+
+}
+    }
+
+  }
+);
+
+
+$("conversationSearch").oninput =
+  renderConversationList;
+
+
+$("newChatButton").onclick =
+  createConversation;
+
+
+// ==========================================
+// 10. MESSAGE DISPLAY
+// ==========================================
+
+function showWelcome() {
+
+  $("messages").innerHTML = `
+    <div class="welcome" id="welcome">
+
+      <div class="welcome-logo">✦</div>
+
+      <h2 id="welcomeTitle">Hello!</h2>
+
+      <p>
+        Ako si Daneel Giskard.
+        Ano ang gusto mong pag-usapan natin ngayon?
+      </p>
+
+    </div>
+  `;
+
+}
+
+
+function renderMessages() {
+
+  const conversation = getActiveConversation();
+
+  if (!conversation) {
+    showWelcome();
+    return;
+  }
+
+  if (!conversation.messages.length) {
+    showWelcome();
+    return;
+  }
+
+  $("messages").innerHTML =
+    conversation.messages.map((message, index) => {
+
+      const isUser = message.role === "user";
+
+      const content = DOMPurify.sanitize(
+  marked.parse(message.content || "")
+);
+
+      return `
+        <div class="message ${isUser ? "user" : "bot"}">
+
+          <div class="message-inner">
+
+            <div class="message-label">
+              ${isUser ? "You" : "Daneel"}
+            </div>
+
+            <div class="bubble">
+              ${content}
+            </div>
+
+            <div class="message-actions">
+               <button
+                  type="button"
+                  class="copy-message-btn"
+                  data-index="${index}"
+                  title="Copy message">
+                   ⧉ Copy
+                </button>
+            </div>
+
+          </div>
+
+        </div>
+      `;
+
+    }).join("");
+  
+    // COPY ENTIRE MESSAGE
+
+$("messages").querySelectorAll(".copy-message-btn")
+  .forEach(button => {
+
+    button.addEventListener("click", async () => {
+
+      const messageElement =
+        button.closest(".message");
+
+      const bubble =
+        messageElement.querySelector(".bubble");
+
+      const textToCopy = bubble.innerText;
+
+      try {
+
+        await navigator.clipboard.writeText(textToCopy);
+
+        button.textContent = "✓ Copied!";
+
+      } catch (error) {
+
+        button.textContent = "Copy failed";
+
+      }
+
+      setTimeout(() => {
+        button.textContent = "⧉ Copy";
+      }, 1800);
+
+    });
+
+  });
+  
+// Apply syntax highlighting and code block actions
+$("messages").querySelectorAll("pre code").forEach(block => {
+
+  hljs.highlightElement(block);
+
+  const pre = block.parentElement;
+
+  // Create toolbar
+  const toolbar = document.createElement("div");
+  toolbar.className = "code-toolbar";
+
+  // Copy button
+  const copyBtn = document.createElement("button");
+  copyBtn.type = "button";
+  copyBtn.textContent = "Copy";
+  copyBtn.className = "code-action-btn";
+
+  copyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(block.textContent);
+      copyBtn.textContent = "Copied!";
+    } catch (error) {
+      copyBtn.textContent = "Copy failed";
+    }
+
+    setTimeout(() => {
+      copyBtn.textContent = "Copy";
+    }, 1800);
+  });
+
+  toolbar.appendChild(copyBtn);
+
+  // Detect HTML code blocks
+  const isHTML =
+    block.classList.contains("language-html") ||
+    block.classList.contains("language-htm");
+
+  // Preview button (HTML only)
+  if (isHTML) {
+
+    const previewBtn = document.createElement("button");
+    previewBtn.type = "button";
+    previewBtn.textContent = "Preview ↗";
+    previewBtn.className = "code-action-btn";
+
+    previewBtn.addEventListener("click", () => {
+      openCodePreview(block.textContent);
+    });
+
+    toolbar.appendChild(previewBtn);
+  }
+
+  pre.parentElement.insertBefore(toolbar, pre);
+
+});
+
+
+  scrollToBottom();
+
+}
+
+function openCodePreview(code) {
+
+  const previewTab = window.open("", "_blank");
+
+  if (!previewTab) {
+    alert("Hindi nabuksan ang preview. Payagan muna ang pop-ups sa browser.");
+    return;
+  }
+
+  previewTab.document.open();
+
+  previewTab.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>Daneel Code Preview</title>
+      <style>
+        * {
+          box-sizing: border-box;
+        }
+
+        html, body {
+          margin: 0;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+          font-family: Arial, sans-serif;
+        }
+
+        .preview-header {
+          height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 14px;
+          background: #202633;
+          color: white;
+          font-size: 13px;
+        }
+
+        iframe {
+          display: block;
+          width: 100%;
+          height: calc(100% - 44px);
+          border: 0;
+          background: white;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="preview-header">
+        <strong>Daneel Code Preview</strong>
+        <span>Live HTML</span>
+      </div>
+    </body>
+    </html>
+  `);
+
+  const frame = previewTab.document.createElement("iframe");
+
+  frame.setAttribute("sandbox", "allow-scripts");
+  frame.srcdoc = code;
+
+  previewTab.document.body.appendChild(frame);
+  previewTab.document.close();
+}
+
+
+
+function addMessage(role, content) {
+
+  const conversation =
+    getActiveConversation() || createConversation();
+
+  conversation.messages.push({
+    role,
+    content
+  });
+
+  conversation.updatedAt = Date.now();
+
+  if (
+    role === "user" &&
+    conversation.title === "New conversation"
+  ) {
+
+    conversation.title =
+      content.slice(0,45) +
+      (content.length > 45 ? "..." : "");
+
+  }
+
+  saveLocalData();
+
+queueFirestoreSave(conversation).catch(error => {
+
+  showStatus(
+    "Local copy saved, but cloud sync failed: " +
+    error.message
+  );
+
+});
+
+renderConversationList();
+renderMessages();
+
+}
+
+
+function scrollToBottom() {
+
+  $("chatArea").scrollTop =
+    $("chatArea").scrollHeight;
+
+}
+
+
+// ==========================================
+// 11. CHAT CONNECTION
+// ==========================================
+
+async function sendMessage() {
+
+  if (isSending) return;
+
+  if (!currentUser) {
+
+    openSettings();
+
+    showStatus("Please sign in to chat.");
+
+    return;
+
+  }
+
+  const input = $("messageInput");
+  const editor = $("richMessageInput");
+
+  const message = getEditorMarkdown();
+
+  input.value = message;
+  
+  if (!message) return;
+
+  if (
+    API_BASE_URL.includes("YOUR-RENDER-SERVICE")
+  ) {
+
+    showStatus(
+      "Backend connection is not configured yet."
+    );
+
+    return;
+
+  }
+
+  let conversation =
+    getActiveConversation();
+
+  if (!conversation) {
+    conversation = createConversation();
+  }
+
+  const previousMessages =
+    conversation.messages.map(item => ({
+      role: item.role,
+      content: item.content
+    }));
+
+  input.value = "";
+  editor.innerHTML = "";
+
+  addMessage("user", message);
+
+  isSending = true;
+
+  $("sendButton").disabled = true;
+
+  showStatus("Daneel is thinking...");
+
+  const typing = document.createElement("div");
+
+  typing.className = "typing";
+  typing.textContent = "Daneel is thinking...";
+
+  $("messages").appendChild(typing);
+
+  scrollToBottom();
+
+  try {
+
+    const token =
+      await currentUser.getIdToken();
+
+    const response = await fetch(
+      API_BASE_URL + "/chat",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+
+        body: JSON.stringify({
+          message,
+          history: previousMessages
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+
+      throw new Error(
+        data.error || "Chat request failed."
+      );
+
+    }
+
+    addMessage(
+      "assistant",
+      data.chat?.text || "No response received."
+    );
+
+  } catch (error) {
+
+    addMessage(
+      "assistant",
+      "Pasensya, nagkaroon ng problema sa koneksyon.\n\n" +
+      error.message
+    );
+
+  } finally {
+
+    typing.remove();
+
+    isSending = false;
+
+    $("sendButton").disabled = false;
+
+    showStatus("");
+
+    editor.focus();
+
+  }
+
+}
+
+
+$("sendButton").onclick = sendMessage;
+
+
+
+$("richMessageInput").addEventListener(
+  "keydown",
+  event => {
+
+    if (event.key === "Enter") {
+
+      // Hayaan ang editor na gumawa ng bagong paragraph
+      event.stopPropagation();
+
+    }
+
+  }
+);
+
+// ==========================================
+// FEATURE MENU
+// ==========================================
+
+const featureMenuButton = $("featureMenuButton");
+const featureMenuPanel = $("featureMenuPanel");
+const closeFeatureMenu = $("closeFeatureMenu");
+
+function toggleFeatureMenu(force) {
+  const isOpen = force !== undefined
+    ? force
+    : featureMenuPanel.classList.contains("hidden");
+
+  featureMenuPanel.classList.toggle("hidden", !isOpen);
+
+  featureMenuButton.setAttribute(
+    "aria-expanded",
+    String(isOpen)
+  );
+}
+
+// Open / toggle
+featureMenuButton.addEventListener("click", event => {
+  event.stopPropagation();
+  toggleFeatureMenu();
+});
+
+// Close button
+closeFeatureMenu.addEventListener("click", () => {
+  toggleFeatureMenu(false);
+});
+
+// Close when clicking outside
+document.addEventListener("click", event => {
+  if (
+    !featureMenuPanel.contains(event.target) &&
+    !featureMenuButton.contains(event.target)
+  ) {
+    toggleFeatureMenu(false);
+  }
+});
+
+// Close with Escape
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") {
+    toggleFeatureMenu(false);
+  }
+});
+  
+// Open Android image picker
+const imageFileInput = $("imageFileInput");
+
+const imageFeatureButton = document.querySelector(
+  '[data-feature="image"]'
+);
+
+// ==========================================
+// IMAGE PREVIEW
+// ==========================================
+
+const imagePreviewArea = $("imagePreviewArea");
+
+let selectedImages = [];
+
+// Display selected images
+function renderImagePreviews() {
+
+  imagePreviewArea.innerHTML = "";
+
+  if (selectedImages.length === 0) {
+    imagePreviewArea.classList.add("hidden");
+    return;
+  }
+
+  imagePreviewArea.classList.remove("hidden");
+
+  selectedImages.forEach((image, index) => {
+
+    const item = document.createElement("div");
+    item.className = "image-preview-item";
+
+    const img = document.createElement("img");
+    img.src = image.previewUrl;
+    img.alt = image.file.name;
+
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "remove-preview-image";
+    removeButton.textContent = "×";
+    removeButton.setAttribute("aria-label", "Remove image");
+
+    removeButton.addEventListener("click", () => {
+
+      URL.revokeObjectURL(image.previewUrl);
+
+      selectedImages.splice(index, 1);
+
+      renderImagePreviews();
+
+    });
+
+    item.appendChild(img);
+    item.appendChild(removeButton);
+
+    imagePreviewArea.appendChild(item);
+
+  });
+}
+
+// Receive selected images
+imageFileInput.addEventListener("change", () => {
+
+  const newFiles = Array.from(imageFileInput.files)
+    .filter(file => file.type.startsWith("image/"));
+
+  newFiles.forEach(file => {
+
+    const alreadySelected = selectedImages.some(image =>
+      image.file.name === file.name &&
+      image.file.size === file.size &&
+      image.file.lastModified === file.lastModified
+    );
+
+    if (alreadySelected) return;
+
+    selectedImages.push({
+      file,
+      previewUrl: URL.createObjectURL(file)
+    });
+
+  });
+
+  renderImagePreviews();
+
+  imageFileInput.value = "";
+
+});
+
+// Open image picker
+imageFeatureButton.addEventListener("click", () => {
+  toggleFeatureMenu(false);
+  imageFileInput.click();
+});
+
+  
+// RICH TEXT EDITOR
+
+const richEditor = $("richMessageInput");
+
+// Keep the selected text active when clicking toolbar buttons
+document.querySelectorAll(".format-toolbar button").forEach(button => {
+
+  button.addEventListener("mousedown", event => {
+    event.preventDefault();
+  });
+
+  button.addEventListener("click", () => {
+
+    const command = button.dataset.command;
+    const value = button.dataset.value || null;
+
+    richEditor.focus();
+
+    document.execCommand(command, false, value);
+
+  });
+
+});
+
+// Convert rich text into Markdown
+function getEditorMarkdown() {
+
+  const cleanHTML = DOMPurify.sanitize(
+    richEditor.innerHTML
+  );
+
+  const service = new TurndownService({
+    codeBlockStyle: "fenced",
+    headingStyle: "atx"
+  });
+
+  service.addRule("codeBlock", {
+    filter: "pre",
+
+    replacement: function(content) {
+
+      const code = content
+        .replace(/\n+$/, "");
+
+      return "\n\n```\n" +
+        code +
+        "\n```\n\n";
+    }
+  });
+
+  return service.turndown(cleanHTML).trim();
+
+}
+// Update hidden textarea whenever editor changes
+richEditor.addEventListener("input", () => {
+
+  $("messageInput").value = getEditorMarkdown();
+
+});
+
+
+// ==========================================
+// 12. INITIALIZATION
+// ==========================================
+
+showWelcome();
+
+</script>
+
+</body>
+</html>
