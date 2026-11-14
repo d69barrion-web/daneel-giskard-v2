@@ -873,6 +873,10 @@ app.delete(
   }
 );
 
+// ==========================================
+// IMAGE INTENT CLASSIFIER ENDPOINT
+// ==========================================
+
 app.post(
   "/classify-intent",
   requireAuth,
