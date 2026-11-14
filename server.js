@@ -15,6 +15,9 @@ const PORT = process.env.PORT || 3000;
 const MODEL =
   process.env.OPENAI_MODEL || "gpt-5.4-mini";
 
+const INTENT_MODEL =
+  process.env.INTENT_MODEL || MODEL;
+
 const MAX_TOOL_ROUNDS =
   Number(process.env.MAX_TOOL_ROUNDS || 6);
 
@@ -216,6 +219,67 @@ Respond naturally in the language used by
 the user, including Filipino or Taglish.
 `;
 
+
+const CLASSIFIER_INSTRUCTIONS = `
+You are Daneel's Image Intent Classifier.
+
+Your ONLY task is to classify the user's intended action.
+
+Choose exactly ONE intent:
+
+GENERATE:
+The user wants a completely new image created
+based on a text prompt.
+
+EDIT:
+The user wants an existing attached image
+modified, transformed, or visually changed.
+
+ANALYZE:
+The user wants an attached image examined,
+described, identified, interpreted, or explained.
+No visual modification is requested.
+
+CHAT:
+The user wants a normal text conversation.
+No image-related action is requested.
+
+CLARIFY:
+The intended action is ambiguous, or essential
+information is missing.
+
+CLASSIFICATION RULES:
+
+1. An attached image alone does not mean EDIT.
+2. Asking what is shown in an image means ANALYZE.
+3. Asking to change an existing image means EDIT.
+4. Asking for a completely new image means GENERATE.
+5. If the user requests editing but no image is attached,
+   choose CLARIFY.
+6. If the request is ambiguous, choose CLARIFY.
+7. Consider the complete meaning of the user's message.
+8. Do not perform any requested action.
+9. Do not explain your decision.
+10. Return only the JSON object defined by the schema.
+`;
+
+const INTENT_SCHEMA = {
+  type: "object",
+  properties: {
+    intent: {
+      type: "string",
+      enum: [
+        "GENERATE",
+        "EDIT",
+        "ANALYZE",
+        "CHAT",
+        "CLARIFY"
+      ]
+    }
+  },
+  required: ["intent"],
+  additionalProperties: false
+};
 
 // ==========================================
 // 6. AVAILABLE AI TOOLS
@@ -465,6 +529,73 @@ async function runDaneel({
 
 }
 
+async function classifyIntent({
+  message,
+  hasImages
+}) {
+
+  if (!openai) {
+    throw new Error(
+      "OpenAI API key is not configured."
+    );
+  }
+
+  const response = await openai.responses.create(
+    {
+      model: INTENT_MODEL,
+
+      instructions: CLASSIFIER_INSTRUCTIONS,
+
+      input: `
+User message:
+${message}
+
+Are images attached?
+${hasImages ? "YES" : "NO"}
+`,
+
+      text: {
+        format: {
+          type: "json_schema",
+          name: "daneel_image_intent",
+          strict: true,
+          schema: INTENT_SCHEMA
+        }
+      },
+
+      max_output_tokens: 100
+    },
+    {
+      signal: AbortSignal.timeout(30000)
+    }
+  );
+
+  if (response.status !== "completed") {
+    throw new Error(
+      "Classifier response did not complete: " +
+      response.status
+    );
+  }
+
+  const rawOutput =
+    response.output_text?.trim();
+
+  if (!rawOutput) {
+    throw new Error(
+      "Classifier returned an empty response."
+    );
+  }
+
+  const result = JSON.parse(rawOutput);
+
+  return {
+    result,
+    rawOutput,
+    responseId: response.id,
+    usage: response.usage || null
+  };
+
+}
 
 // ==========================================
 // 9. HEALTH CHECK
@@ -735,6 +866,67 @@ app.delete(
       return res.status(500).json({
         ok: false,
         error: "Unable to delete conversation."
+      });
+
+    }
+
+  }
+);
+
+app.post(
+  "/classify-intent",
+  requireAuth,
+  async (req, res) => {
+
+    try {
+
+      const message = req.body?.message;
+      const hasImages = req.body?.hasImages;
+
+      if (
+        typeof message !== "string" ||
+        !message.trim()
+      ) {
+        return res.status(400).json({
+          ok: false,
+          error: "A valid message is required."
+        });
+      }
+
+      if (
+        typeof hasImages !== "boolean"
+      ) {
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid image attachment information."
+        });
+      }
+
+      const classification = await classifyIntent({
+        message: message.trim(),
+        hasImages
+      });
+
+      return res.json({
+        ok: true,
+        classifier: classification.result,
+        rawOutput: classification.rawOutput,
+        responseId: classification.responseId,
+        usage: classification.usage,
+        model: INTENT_MODEL
+      });
+
+    } catch (error) {
+
+      console.error(
+        "Intent classification failed:",
+        error.message
+      );
+
+      return res.status(500).json({
+        ok: false,
+        error:
+          "Intent classification failed."
       });
 
     }
