@@ -368,6 +368,20 @@ const MODEL_PRICING_USD_PER_MILLION = {
   }
 };
 
+function getBillingPricingKey(model) {
+  // Recognize dated snapshots of GPT-5.4 mini.
+  const datedMiniMatch = model.match(
+    /^gpt-5\.4-mini-\d{4}-\d{2}-\d{2}$/
+  );
+
+  if (datedMiniMatch) {
+    return "gpt-5.4-mini";
+  }
+
+  // Exact model match for all other configured models.
+  return model;
+}
+
 const USD_TO_PHP_RATE = Number(
   process.env.USD_TO_PHP_RATE || 58
 );
@@ -395,7 +409,10 @@ function calculateInteractionBilling(roundUsage) {
   let totalCostUsd = 0;
 
   const roundBreakdown = roundUsage.map(record => {
-    const pricing = MODEL_PRICING_USD_PER_MILLION[record.model];
+    const pricingKey = getBillingPricingKey(record.model);
+
+const pricing =
+  MODEL_PRICING_USD_PER_MILLION[pricingKey];
 
     if (!pricing) {
       throw new Error(
