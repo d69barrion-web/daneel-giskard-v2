@@ -383,7 +383,7 @@ function getBillingPricingKey(model) {
 }
 
 const USD_TO_PHP_RATE = Number(
-  process.env.USD_TO_PHP_RATE || 58
+  process.env.USD_TO_PHP_RATE
 );
 
 function calculateInteractionBilling(roundUsage) {
