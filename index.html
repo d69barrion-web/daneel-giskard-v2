@@ -2525,9 +2525,10 @@ $("settingsOverlay").onclick = event => {
 document.addEventListener("keydown", event => {
 
   if (event.key === "Escape") {
+    closeImageDetail();
+    closeImageLibrary();
     closeDrawer();
     closeSettings();
-    closeImageLibrary();
   }
 
 });
