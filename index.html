@@ -1056,6 +1056,119 @@ body.light .user .bubble {
   line-height: 1;
   cursor: pointer;
 }
+  
+/* IMAGE LIBRARY VIEWER */
+
+.image-library-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(0,0,0,.65);
+}
+
+.image-library-overlay.open {
+  display: flex;
+}
+
+.image-library-panel {
+  width: min(760px, 100%);
+  height: min(850px, 94dvh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 17px;
+  box-shadow: var(--shadow);
+}
+
+.image-library-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px;
+  border-bottom: 1px solid var(--border);
+}
+
+.image-library-header h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.image-library-header p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.image-library-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px;
+  overflow-y: auto;
+}
+
+@media (min-width: 560px) {
+  .image-library-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.image-library-card {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+}
+
+.image-library-card img {
+  width: 100%;
+  aspect-ratio: 1;
+  display: block;
+  object-fit: cover;
+  border-radius: 8px;
+  background: var(--panel2);
+}
+
+.image-library-filename {
+  margin: 8px 0 3px;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.image-library-meta {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.image-library-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.image-library-actions button {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel2);
+  color: var(--text);
+  font-size: 11px;
+}
+
+.image-library-actions .delete-image-btn {
+  color: var(--danger);
+}
 </style>
   
 <link
@@ -1405,7 +1518,23 @@ body.light .user .bubble {
       </div>
 
     </div>
+    
+    <!-- IMAGE LIBRARY -->
 
+     <div class="section">
+
+       <h4>Image Library</h4>
+
+       <p>
+    Tingnan at pamahalaan ang mga larawang
+    naka-save sa device na ito.
+       </p>
+
+       <button class="primary-btn" id="openImageLibrary">
+        🖼️ Open Image Library
+       </button>
+
+    </div>
 
     <!-- APPEARANCE -->
 
@@ -1434,7 +1563,36 @@ body.light .user .bubble {
   </section>
 
 </div>
+  
+<!-- IMAGE LIBRARY VIEWER -->
 
+<div class="image-library-overlay" id="imageLibraryOverlay">
+
+  <section class="image-library-panel">
+
+    <div class="image-library-header">
+
+      <div>
+        <h3>Image Library</h3>
+        <p id="imageLibraryCount">Loading images...</p>
+      </div>
+
+      <button class="icon-btn" id="closeImageLibrary">
+        ✕
+      </button>
+
+    </div>
+
+    <div id="imageLibraryGrid" class="image-library-grid">
+    </div>
+
+    <div id="imageLibraryEmpty" class="draft-empty hidden">
+      Wala pang saved images sa library.
+    </div>
+
+  </section>
+
+</div>
 
 <!-- FIREBASE AND APPLICATION LOGIC -->
 
@@ -3289,22 +3447,31 @@ async function saveImageToLocalLibrary(file) {
 
   // Check whether the same image already exists
 
-  const existing = await new Promise((resolve, reject) => {
+const existing = await new Promise((resolve, reject) => {
 
-    const transaction = db.transaction(
-      IMAGE_STORE_NAME,
-      "readonly"
+  const transaction = db.transaction(
+    IMAGE_STORE_NAME,
+    "readonly"
+  );
+
+  const request = transaction
+    .objectStore(IMAGE_STORE_NAME)
+    .index("sha256")
+    .getAll(sha256);
+
+  request.onsuccess = () => {
+
+    const match = request.result.find(image =>
+      image.ownerUid === currentUser.uid
     );
 
-    const request = transaction
-      .objectStore(IMAGE_STORE_NAME)
-      .index("sha256")
-      .get(sha256);
+    resolve(match || null);
 
-    request.onsuccess = () => resolve(request.result || null);
-    request.onerror = () => reject(request.error);
+  };
 
-  });
+  request.onerror = () => reject(request.error);
+
+});
 
   if (existing) {
     return {
@@ -3412,7 +3579,311 @@ async function downloadLocalImage(imageId) {
   }, 1000);
 
 }
+// ==========================================
+// IMAGE LIBRARY VIEWER
+// ==========================================
 
+const imageLibraryOverlay = $("imageLibraryOverlay");
+const imageLibraryGrid = $("imageLibraryGrid");
+const imageLibraryCount = $("imageLibraryCount");
+const imageLibraryEmpty = $("imageLibraryEmpty");
+
+let imageLibraryPreviewUrls = [];
+
+
+// Get all images belonging to the signed-in user
+
+async function getAllLocalImages() {
+
+  if (!currentUser) {
+    throw new Error("Please sign in first.");
+  }
+
+  const db = await openImageDatabase();
+
+  return new Promise((resolve, reject) => {
+
+    const transaction = db.transaction(
+      IMAGE_STORE_NAME,
+      "readonly"
+    );
+
+    const request = transaction
+      .objectStore(IMAGE_STORE_NAME)
+      .getAll();
+
+    request.onsuccess = () => {
+
+      const images = request.result
+        .filter(image =>
+          image.ownerUid === currentUser.uid
+        )
+        .sort((a, b) =>
+          b.createdAt - a.createdAt
+        );
+
+      resolve(images);
+
+    };
+
+    request.onerror = () => reject(request.error);
+
+  });
+
+}
+
+
+// Delete one saved image
+
+async function deleteLocalImage(imageId) {
+
+  if (!currentUser) {
+    throw new Error("Please sign in first.");
+  }
+
+  const image = await getLocalImage(imageId);
+
+  if (!image || image.ownerUid !== currentUser.uid) {
+    throw new Error("Image not found in your library.");
+  }
+
+  const db = await openImageDatabase();
+
+  return new Promise((resolve, reject) => {
+
+    const transaction = db.transaction(
+      IMAGE_STORE_NAME,
+      "readwrite"
+    );
+
+    transaction.objectStore(IMAGE_STORE_NAME)
+      .delete(imageId);
+
+    transaction.oncomplete = resolve;
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+
+  });
+
+}
+
+
+// Format image size
+
+function formatImageSize(bytes) {
+
+  if (bytes < 1024) {
+    return bytes + " B";
+  }
+
+  if (bytes < 1024 * 1024) {
+    return (bytes / 1024).toFixed(1) + " KB";
+  }
+
+  return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+
+}
+
+
+// Release old preview URLs
+
+function clearImageLibraryPreviews() {
+
+  imageLibraryPreviewUrls.forEach(url => {
+    URL.revokeObjectURL(url);
+  });
+
+  imageLibraryPreviewUrls = [];
+
+}
+
+
+// Display the saved images
+
+async function renderImageLibrary() {
+
+  imageLibraryGrid.innerHTML = "";
+
+  clearImageLibraryPreviews();
+
+  imageLibraryEmpty.classList.add("hidden");
+
+  imageLibraryCount.textContent = "Loading images...";
+
+  try {
+
+    const images = await getAllLocalImages();
+
+    imageLibraryCount.textContent =
+      images.length + " saved image(s)";
+
+    if (images.length === 0) {
+
+      imageLibraryEmpty.classList.remove("hidden");
+
+      return;
+
+    }
+
+    images.forEach(image => {
+
+      const card = document.createElement("div");
+      card.className = "image-library-card";
+
+      const previewUrl = URL.createObjectURL(image.blob);
+
+      imageLibraryPreviewUrls.push(previewUrl);
+
+      const img = document.createElement("img");
+      img.src = previewUrl;
+      img.alt = image.filename;
+      img.loading = "lazy";
+
+      const filename = document.createElement("div");
+      filename.className = "image-library-filename";
+      filename.textContent = image.filename;
+
+      const meta = document.createElement("div");
+      meta.className = "image-library-meta";
+
+      meta.textContent =
+        formatImageSize(image.size) +
+        " • " +
+        new Date(image.createdAt).toLocaleDateString();
+
+      const actions = document.createElement("div");
+      actions.className = "image-library-actions";
+
+      // DOWNLOAD BUTTON
+
+      const downloadButton = document.createElement("button");
+
+      downloadButton.type = "button";
+      downloadButton.textContent = "↓ Download";
+
+      downloadButton.addEventListener("click", async () => {
+
+        try {
+
+          await downloadLocalImage(image.imageId);
+
+          showStatus("Image download started.");
+
+        } catch (error) {
+
+          showStatus(error.message);
+
+        }
+
+      });
+
+      // DELETE BUTTON
+
+      const deleteButton = document.createElement("button");
+
+      deleteButton.type = "button";
+      deleteButton.textContent = "Delete";
+      deleteButton.className = "delete-image-btn";
+
+      deleteButton.addEventListener("click", async () => {
+
+        const confirmed = confirm(
+          "Delete this saved image from the local library?"
+        );
+
+        if (!confirmed) return;
+
+        try {
+
+          await deleteLocalImage(image.imageId);
+
+          await renderImageLibrary();
+
+          showStatus("Image deleted from local library.");
+
+        } catch (error) {
+
+          showStatus(
+            "Could not delete image: " + error.message
+          );
+
+        }
+
+      });
+
+      actions.appendChild(downloadButton);
+      actions.appendChild(deleteButton);
+
+      card.appendChild(img);
+      card.appendChild(filename);
+      card.appendChild(meta);
+      card.appendChild(actions);
+
+      imageLibraryGrid.appendChild(card);
+
+    });
+
+  } catch (error) {
+
+    imageLibraryCount.textContent = "Unable to load images.";
+
+    showStatus(
+      "Image Library error: " + error.message
+    );
+
+  }
+
+}
+
+
+// Open and close viewer
+
+function openImageLibrary() {
+
+  if (!currentUser) {
+
+    showStatus("Please sign in to access your Image Library.");
+
+    openSettings();
+
+    return;
+
+  }
+
+  imageLibraryOverlay.classList.add("open");
+
+  renderImageLibrary();
+
+}
+
+
+function closeImageLibrary() {
+
+  imageLibraryOverlay.classList.remove("open");
+
+  clearImageLibraryPreviews();
+
+}
+
+
+$("openImageLibrary").addEventListener(
+  "click",
+  openImageLibrary
+);
+
+$("closeImageLibrary").addEventListener(
+  "click",
+  closeImageLibrary
+);
+
+imageLibraryOverlay.addEventListener("click", event => {
+
+  if (event.target === imageLibraryOverlay) {
+    closeImageLibrary();
+  }
+
+});
+  
 // ==========================================
 // IMAGE PREVIEW
 // ==========================================
