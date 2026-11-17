@@ -3191,6 +3191,229 @@ const imageFeatureButton = document.querySelector(
 );
 
 // ==========================================
+// LOCAL IMAGE LIBRARY — INDEXEDDB
+// ==========================================
+
+const IMAGE_DB_NAME = "DaneelImageLibrary";
+const IMAGE_DB_VERSION = 1;
+const IMAGE_STORE_NAME = "images";
+
+let imageDatabasePromise = null;
+
+function openImageDatabase() {
+
+  if (imageDatabasePromise) {
+    return imageDatabasePromise;
+  }
+
+  imageDatabasePromise = new Promise((resolve, reject) => {
+
+    const request = indexedDB.open(
+      IMAGE_DB_NAME,
+      IMAGE_DB_VERSION
+    );
+
+    request.onupgradeneeded = event => {
+
+      const db = event.target.result;
+
+      if (!db.objectStoreNames.contains(IMAGE_STORE_NAME)) {
+
+        const store = db.createObjectStore(
+          IMAGE_STORE_NAME,
+          { keyPath: "imageId" }
+        );
+
+        store.createIndex(
+          "sha256",
+          "sha256",
+          { unique: false }
+        );
+
+        store.createIndex(
+          "ownerUid",
+          "ownerUid",
+          { unique: false }
+        );
+
+      }
+
+    };
+
+    request.onsuccess = () => {
+      resolve(request.result);
+    };
+
+    request.onerror = () => {
+      imageDatabasePromise = null;
+      reject(request.error);
+    };
+
+  });
+
+  return imageDatabasePromise;
+}
+
+
+// Generate SHA-256 fingerprint
+
+async function calculateImageHash(file) {
+
+  if (!crypto.subtle) {
+    throw new Error(
+      "Secure browser context required for image hashing."
+    );
+  }
+
+  const buffer = await file.arrayBuffer();
+
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    buffer
+  );
+
+  return Array.from(new Uint8Array(digest))
+    .map(byte => byte.toString(16).padStart(2, "0"))
+    .join("");
+
+}
+
+
+// Save original image locally
+
+async function saveImageToLocalLibrary(file) {
+
+  const db = await openImageDatabase();
+
+  const sha256 = await calculateImageHash(file);
+
+  // Check whether the same image already exists
+
+  const existing = await new Promise((resolve, reject) => {
+
+    const transaction = db.transaction(
+      IMAGE_STORE_NAME,
+      "readonly"
+    );
+
+    const request = transaction
+      .objectStore(IMAGE_STORE_NAME)
+      .index("sha256")
+      .get(sha256);
+
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error);
+
+  });
+
+  if (existing) {
+    return {
+      ...existing,
+      duplicate: true
+    };
+  }
+
+  const imageRecord = {
+
+    imageId: "img_" + createId(),
+
+    ownerUid: currentUser.uid,
+
+    filename: file.name,
+
+    mimeType: file.type,
+
+    size: file.size,
+
+    lastModified: file.lastModified,
+
+    sha256,
+
+    blob: file,
+
+    storageType: "local",
+
+    createdAt: Date.now()
+
+  };
+
+  await new Promise((resolve, reject) => {
+
+    const transaction = db.transaction(
+      IMAGE_STORE_NAME,
+      "readwrite"
+    );
+
+    transaction.objectStore(IMAGE_STORE_NAME)
+      .add(imageRecord);
+
+    transaction.oncomplete = resolve;
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+
+  });
+
+  return {
+    ...imageRecord,
+    duplicate: false
+  };
+
+}
+
+
+// Retrieve an image by its ID
+
+async function getLocalImage(imageId) {
+
+  const db = await openImageDatabase();
+
+  return new Promise((resolve, reject) => {
+
+    const transaction = db.transaction(
+      IMAGE_STORE_NAME,
+      "readonly"
+    );
+
+    const request = transaction
+      .objectStore(IMAGE_STORE_NAME)
+      .get(imageId);
+
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error);
+
+  });
+
+}
+
+
+// Download original image to device
+
+async function downloadLocalImage(imageId) {
+
+  const image = await getLocalImage(imageId);
+
+  if (!image || !image.blob) {
+    throw new Error("Local image is unavailable.");
+  }
+
+  const url = URL.createObjectURL(image.blob);
+
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = image.filename;
+
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 1000);
+
+}
+
+// ==========================================
 // IMAGE PREVIEW
 // ==========================================
 
@@ -3243,13 +3466,19 @@ function renderImagePreviews() {
   });
 }
 
-// Receive selected images
-imageFileInput.addEventListener("change", () => {
+
+// Receive and save selected images
+
+imageFileInput.addEventListener("change", async () => {
 
   const newFiles = Array.from(imageFileInput.files)
     .filter(file => file.type.startsWith("image/"));
 
-  newFiles.forEach(file => {
+  if (newFiles.length === 0) return;
+
+  showStatus("Saving images to local library...");
+
+  for (const file of newFiles) {
 
     const alreadySelected = selectedImages.some(image =>
       image.file.name === file.name &&
@@ -3257,18 +3486,48 @@ imageFileInput.addEventListener("change", () => {
       image.file.lastModified === file.lastModified
     );
 
-    if (alreadySelected) return;
+    if (alreadySelected) continue;
 
-    selectedImages.push({
-      file,
-      previewUrl: URL.createObjectURL(file)
-    });
+    try {
 
-  });
+      const savedImage =
+        await saveImageToLocalLibrary(file);
+
+      selectedImages.push({
+
+        file,
+
+        imageId: savedImage.imageId,
+
+        sha256: savedImage.sha256,
+
+        duplicate: savedImage.duplicate,
+
+        previewUrl: URL.createObjectURL(file)
+
+      });
+
+    } catch (error) {
+
+      console.error("Image storage error:", error);
+
+      showStatus(
+        "Could not save " + file.name +
+        ": " + error.message
+      );
+
+    }
+
+  }
 
   renderImagePreviews();
 
   imageFileInput.value = "";
+
+  showStatus(
+    selectedImages.length +
+    " image(s) selected and saved locally."
+  );
 
 });
 
