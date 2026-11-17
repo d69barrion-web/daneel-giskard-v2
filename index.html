@@ -3458,8 +3458,37 @@ function renderImagePreviews() {
 
     });
 
-    item.appendChild(img);
-    item.appendChild(removeButton);
+    
+item.appendChild(img);
+
+// Download button
+
+const downloadButton = document.createElement("button");
+
+downloadButton.type = "button";
+downloadButton.className = "download-preview-image";
+downloadButton.textContent = "↓";
+downloadButton.title = "Download original image";
+
+downloadButton.addEventListener("click", async () => {
+
+  try {
+
+    await downloadLocalImage(image.imageId);
+
+    showStatus("Image download started.");
+
+  } catch (error) {
+
+    showStatus(error.message);
+
+  }
+
+});
+
+item.appendChild(downloadButton);
+item.appendChild(removeButton);
+
 
     imagePreviewArea.appendChild(item);
 
