@@ -854,6 +854,387 @@ app.get("/health", (req, res) => {
 });
 
 // ==========================================
+// IMAGE REGISTRY
+// ==========================================
+
+// Each user's image registry:
+// users/{uid}/images/{imageId}
+
+function getUserImagesCollection(uid) {
+
+  if (!uid || typeof uid !== "string") {
+    throw new Error("Invalid user UID.");
+  }
+
+  return getFirestore()
+    .collection("users")
+    .doc(uid)
+    .collection("images");
+
+}
+
+
+// ==========================================
+// REGISTER OR UPDATE IMAGE METADATA
+// ==========================================
+
+app.post(
+  "/images/register",
+  requireAuth,
+  async (req, res) => {
+
+    try {
+
+      const body = req.body || {};
+
+      const {
+        imageId,
+        filename,
+        mimeType,
+        size,
+        lastModified,
+        sha256,
+        storageType
+      } = body;
+
+
+      // ------------------------------------
+      // VALIDATE IMAGE ID
+      // ------------------------------------
+
+      if (
+        typeof imageId !== "string" ||
+        !/^img_[a-z0-9]{8,64}$/.test(imageId)
+      ) {
+
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid image ID."
+        });
+
+      }
+
+
+      // ------------------------------------
+      // VALIDATE FILENAME
+      // ------------------------------------
+
+      if (
+        typeof filename !== "string" ||
+        !filename.trim() ||
+        filename.length > 255
+      ) {
+
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid image filename."
+        });
+
+      }
+
+
+      // ------------------------------------
+      // VALIDATE MIME TYPE
+      // ------------------------------------
+
+      if (
+        typeof mimeType !== "string" ||
+        !mimeType.startsWith("image/") ||
+        mimeType.length > 100
+      ) {
+
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid image MIME type."
+        });
+
+      }
+
+
+      // ------------------------------------
+      // VALIDATE FILE SIZE
+      // ------------------------------------
+
+      if (
+        !Number.isSafeInteger(size) ||
+        size <= 0 ||
+        size > 100 * 1024 * 1024
+      ) {
+
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid image file size."
+        });
+
+      }
+
+
+      // ------------------------------------
+      // VALIDATE SHA-256
+      // ------------------------------------
+
+      if (
+        typeof sha256 !== "string" ||
+        !/^[a-f0-9]{64}$/i.test(sha256)
+      ) {
+
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid SHA-256 hash."
+        });
+
+      }
+
+
+      // ------------------------------------
+      // VALIDATE STORAGE TYPE
+      // ------------------------------------
+
+      if (storageType !== "local") {
+
+        return res.status(400).json({
+          ok: false,
+          error: "Unsupported image storage type."
+        });
+
+      }
+
+
+      // ------------------------------------
+      // VALIDATE LAST MODIFIED
+      // ------------------------------------
+
+      if (
+        lastModified !== undefined &&
+        (
+          typeof lastModified !== "number" ||
+          !Number.isFinite(lastModified) ||
+          lastModified < 0
+        )
+      ) {
+
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid lastModified value."
+        });
+
+      }
+
+
+      // ------------------------------------
+      // GET AUTHENTICATED USER'S DOCUMENT
+      // ------------------------------------
+
+      const ref = getUserImagesCollection(
+        req.user.uid
+      ).doc(imageId);
+
+
+      // ------------------------------------
+      // SAVE USING TRANSACTION
+      // ------------------------------------
+
+      const result = await getFirestore()
+        .runTransaction(async transaction => {
+
+          const snapshot = await transaction.get(ref);
+
+          const existing = snapshot.exists
+            ? snapshot.data()
+            : null;
+
+
+          // An existing ID must never silently
+          // point to a different original image.
+
+          if (
+            existing &&
+            existing.sha256 !== sha256.toLowerCase()
+          ) {
+
+            const error = new Error(
+              "Image ID already belongs to another image."
+            );
+
+            error.status = 409;
+
+            throw error;
+
+          }
+
+
+          const now =
+            admin.firestore.FieldValue.serverTimestamp();
+
+
+          const record = {
+
+            imageId,
+
+            filename: filename.trim(),
+
+            mimeType,
+
+            size,
+
+            lastModified:
+              lastModified || null,
+
+            sha256: sha256.toLowerCase(),
+
+            storageType: "local",
+
+            status: existing
+              ? existing.status || "local_registered"
+              : "local_registered",
+
+            openaiFileId:
+              existing?.openaiFileId || null,
+
+            createdAt:
+              existing?.createdAt || now,
+
+            updatedAt: now
+
+          };
+
+
+          transaction.set(
+            ref,
+            record,
+            { merge: true }
+          );
+
+
+          return {
+            created: !snapshot.exists,
+            imageId
+          };
+
+        });
+
+
+      return res.status(
+        result.created ? 201 : 200
+      ).json({
+
+        ok: true,
+
+        message: result.created
+          ? "Image registered successfully."
+          : "Image registry updated successfully.",
+
+        image: result
+
+      });
+
+
+    } catch (error) {
+
+      console.error(
+        "Image registration failed:",
+        error.message
+      );
+
+
+      const status =
+        Number.isInteger(error.status)
+          ? error.status
+          : 500;
+
+
+      return res.status(status).json({
+
+        ok: false,
+
+        error: status === 500
+          ? "Unable to register image."
+          : error.message
+
+      });
+
+    }
+
+  }
+);
+
+
+// ==========================================
+// GET USER IMAGE REGISTRY
+// ==========================================
+
+app.get(
+  "/images",
+  requireAuth,
+  async (req, res) => {
+
+    try {
+
+      const snapshot =
+        await getUserImagesCollection(
+          req.user.uid
+        ).get();
+
+
+      const images = snapshot.docs.map(doc => {
+
+        const data = doc.data();
+
+        return {
+
+          ...data,
+
+          createdAtMs:
+            data.createdAt?.toMillis?.() || null,
+
+          updatedAtMs:
+            data.updatedAt?.toMillis?.() || null
+
+        };
+
+      });
+
+
+      images.sort(
+        (a, b) =>
+          (b.createdAtMs || 0) -
+          (a.createdAtMs || 0)
+      );
+
+
+      return res.json({
+
+        ok: true,
+
+        count: images.length,
+
+        images
+
+      });
+
+
+    } catch (error) {
+
+      console.error(
+        "Loading image registry failed:",
+        error.message
+      );
+
+
+      return res.status(500).json({
+
+        ok: false,
+
+        error: "Unable to load image registry."
+
+      });
+
+    }
+
+  }
+);
+
+// ==========================================
 // 9.1 GET USER CONVERSATIONS
 // ==========================================
 
