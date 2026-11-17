@@ -1169,6 +1169,150 @@ body.light .user .bubble {
 .image-library-actions .delete-image-btn {
   color: var(--danger);
 }
+  
+/* IMAGE DETAIL VIEWER */
+
+.image-detail-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(0,0,0,.78);
+}
+
+.image-detail-overlay.open {
+  display: flex;
+}
+
+.image-detail-panel {
+  width: min(700px, 100%);
+  max-height: 94dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 17px;
+  box-shadow: var(--shadow);
+}
+
+.image-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.image-detail-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.image-detail-content {
+  overflow-y: auto;
+  padding: 14px;
+}
+
+.image-detail-preview {
+  width: 100%;
+  height: min(38dvh, 320px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.image-detail-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.image-detail-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.image-detail-field {
+  min-width: 0;
+}
+
+.image-detail-field label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.image-detail-field > div {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.image-detail-copy-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.image-detail-copy-row code {
+  flex: 1;
+  min-width: 0;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.image-detail-copy-row button {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel2);
+  color: var(--text);
+  font-size: 11px;
+}
+
+.image-detail-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+}
+
+.image-detail-actions button {
+  flex: 1;
+  padding: 11px 7px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+#useImageReference {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+#useImageReference.selected {
+  background: var(--panel2);
+  color: var(--accent);
+  border-color: var(--accent);
+}
 </style>
   
 <link
@@ -1589,6 +1733,100 @@ body.light .user .bubble {
     <div id="imageLibraryEmpty" class="draft-empty hidden">
       Wala pang saved images sa library.
     </div>
+
+  </section>
+
+</div>
+  
+  <!-- IMAGE DETAIL VIEWER -->
+
+<div class="image-detail-overlay" id="imageDetailOverlay">
+
+  <section class="image-detail-panel">
+
+    <div class="image-detail-header">
+
+      <h3>Image Details</h3>
+
+      <button class="icon-btn" id="closeImageDetail">
+        ✕
+      </button>
+
+    </div>
+
+    <div class="image-detail-content">
+
+      <div class="image-detail-preview">
+        <img id="imageDetailPreview" alt="Selected image">
+      </div>
+
+      <div class="image-detail-info">
+
+        <div class="image-detail-field">
+          <label>Filename</label>
+          <div id="detailFilename"></div>
+        </div>
+
+        <div class="image-detail-field">
+          <label>Image ID</label>
+          <div class="image-detail-copy-row">
+            <code id="detailImageId"></code>
+            <button type="button" id="copyImageId">Copy</button>
+          </div>
+        </div>
+
+        <div class="image-detail-field">
+          <label>SHA-256</label>
+          <div class="image-detail-copy-row">
+            <code id="detailSha256"></code>
+            <button type="button" id="copyImageHash">Copy</button>
+          </div>
+        </div>
+
+        <div class="image-detail-field">
+          <label>MIME Type</label>
+          <div id="detailMimeType"></div>
+        </div>
+
+        <div class="image-detail-field">
+          <label>File Size</label>
+          <div id="detailFileSize"></div>
+        </div>
+
+        <div class="image-detail-field">
+          <label>Date Saved</label>
+          <div id="detailCreatedAt"></div>
+        </div>
+
+        <div class="image-detail-field">
+          <label>Storage</label>
+          <div id="detailStorageType"></div>
+        </div>
+
+        <div class="image-detail-field">
+          <label>OpenAI File ID</label>
+          <div id="detailOpenAIFileId">
+            Not uploaded yet
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="image-detail-actions">
+
+      <button type="button" id="useImageReference">
+        Use as Reference
+      </button>
+
+      <button type="button" id="downloadDetailImage">
+        ↓ Download Original
+      </button>
+
+    </div>
+
+    <div id="imageDetailStatus" class="status"></div>
 
   </section>
 
@@ -3736,13 +3974,26 @@ async function renderImageLibrary() {
       imageLibraryPreviewUrls.push(previewUrl);
 
       const img = document.createElement("img");
-      img.src = previewUrl;
-      img.alt = image.filename;
-      img.loading = "lazy";
+
+        img.src = previewUrl;
+        img.alt = image.filename;
+        img.loading = "lazy";
+
+        img.style.cursor = "pointer";
+
+        img.addEventListener("click", () => {
+        openImageDetail(image.imageId);
+      });
 
       const filename = document.createElement("div");
       filename.className = "image-library-filename";
       filename.textContent = image.filename;
+
+       filename.style.cursor = "pointer";
+
+       filename.addEventListener("click", () => {
+       openImageDetail(image.imageId);
+      });
 
       const meta = document.createElement("div");
       meta.className = "image-library-meta";
@@ -3835,7 +4086,253 @@ async function renderImageLibrary() {
   }
 
 }
+  
+// ==========================================
+// IMAGE DETAIL VIEWER
+// ==========================================
 
+const imageDetailOverlay = $("imageDetailOverlay");
+
+let currentDetailImage = null;
+let imageDetailPreviewUrl = null;
+
+// Temporary reference selection.
+// This will be connected to image analysis later.
+
+let selectedReferenceImageId = null;
+
+
+// Open image details
+
+async function openImageDetail(imageId) {
+
+  try {
+
+    const image = await getLocalImage(imageId);
+
+    if (
+      !image ||
+      !currentUser ||
+      image.ownerUid !== currentUser.uid
+    ) {
+      throw new Error("Image not found in your library.");
+    }
+
+    currentDetailImage = image;
+
+    // Release previous preview
+
+    if (imageDetailPreviewUrl) {
+      URL.revokeObjectURL(imageDetailPreviewUrl);
+    }
+
+    imageDetailPreviewUrl = URL.createObjectURL(
+      image.blob
+    );
+
+    $("imageDetailPreview").src =
+      imageDetailPreviewUrl;
+
+    $("detailFilename").textContent =
+      image.filename || "Unknown";
+
+    $("detailImageId").textContent =
+      image.imageId || "Unavailable";
+
+    $("detailSha256").textContent =
+      image.sha256 || "Unavailable";
+
+    $("detailMimeType").textContent =
+      image.mimeType || "Unknown";
+
+    $("detailFileSize").textContent =
+      formatImageSize(image.size || 0);
+
+    $("detailCreatedAt").textContent =
+      new Date(image.createdAt).toLocaleString();
+
+    $("detailStorageType").textContent =
+      image.storageType || "Local";
+
+    // OpenAI file ID will be populated
+    // when we implement OpenAI upload.
+
+    $("detailOpenAIFileId").textContent =
+      image.openaiFileId || "Not uploaded yet";
+
+    updateReferenceButton();
+
+    $("imageDetailStatus").textContent = "";
+
+    imageDetailOverlay.classList.add("open");
+
+  } catch (error) {
+
+    showStatus(
+      "Could not open image details: " +
+      error.message
+    );
+
+  }
+
+}
+
+
+// Update reference button
+
+function updateReferenceButton() {
+
+  const button = $("useImageReference");
+
+  const isSelected =
+    currentDetailImage &&
+    selectedReferenceImageId ===
+    currentDetailImage.imageId;
+
+  button.classList.toggle(
+    "selected",
+    Boolean(isSelected)
+  );
+
+  button.textContent = isSelected
+    ? "✓ Selected as Reference"
+    : "Use as Reference";
+
+}
+
+
+// Select current image as reference
+
+$("useImageReference").addEventListener(
+  "click",
+  () => {
+
+    if (!currentDetailImage) return;
+
+    selectedReferenceImageId =
+      currentDetailImage.imageId;
+
+    updateReferenceButton();
+
+    $("imageDetailStatus").textContent =
+      "Image selected as the current reference.";
+
+  }
+);
+
+
+// Copy helper
+
+async function copyImageDetailValue(value) {
+
+  try {
+
+    await navigator.clipboard.writeText(value);
+
+    $("imageDetailStatus").textContent =
+      "Copied to clipboard.";
+
+  } catch (error) {
+
+    $("imageDetailStatus").textContent =
+      "Clipboard access is unavailable in this browser.";
+
+  }
+
+}
+
+
+// Copy Image ID
+
+$("copyImageId").addEventListener("click", () => {
+
+  if (!currentDetailImage) return;
+
+  copyImageDetailValue(
+    currentDetailImage.imageId
+  );
+
+});
+
+
+// Copy SHA-256
+
+$("copyImageHash").addEventListener("click", () => {
+
+  if (!currentDetailImage) return;
+
+  copyImageDetailValue(
+    currentDetailImage.sha256
+  );
+
+});
+
+
+// Download original
+
+$("downloadDetailImage").addEventListener(
+  "click",
+  async () => {
+
+    if (!currentDetailImage) return;
+
+    try {
+
+      await downloadLocalImage(
+        currentDetailImage.imageId
+      );
+
+      $("imageDetailStatus").textContent =
+        "Original image download started.";
+
+    } catch (error) {
+
+      $("imageDetailStatus").textContent =
+        error.message;
+
+    }
+
+  }
+);
+
+
+// Close detail viewer
+
+function closeImageDetail() {
+
+  imageDetailOverlay.classList.remove("open");
+
+  $("imageDetailPreview").src = "";
+
+  if (imageDetailPreviewUrl) {
+
+    URL.revokeObjectURL(imageDetailPreviewUrl);
+
+    imageDetailPreviewUrl = null;
+
+  }
+
+  currentDetailImage = null;
+
+}
+
+
+$("closeImageDetail").addEventListener(
+  "click",
+  closeImageDetail
+);
+
+
+imageDetailOverlay.addEventListener(
+  "click",
+  event => {
+
+    if (event.target === imageDetailOverlay) {
+      closeImageDetail();
+    }
+
+  }
+);
 
 // Open and close viewer
 
