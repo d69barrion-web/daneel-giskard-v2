@@ -4209,6 +4209,182 @@ function getSelectedReferenceImageId() {
   return selectedReferenceImageId;
 }
 
+// ==========================================
+// SYNC IMAGE METADATA TO FIRESTORE
+// ==========================================
+
+async function syncImageMetadataToFirestore(image) {
+
+  if (!currentUser) {
+    throw new Error("Please sign in first.");
+  }
+
+  if (!image || !image.imageId) {
+    throw new Error("Invalid image record.");
+  }
+
+  const ownerUid = currentUser.uid;
+
+  if (image.ownerUid !== ownerUid) {
+    throw new Error("Image ownership verification failed.");
+  }
+
+  // Send metadata only.
+  // The original image Blob is NOT uploaded here.
+
+  const payload = {
+    imageId: image.imageId,
+    filename: image.filename,
+    mimeType: image.mimeType,
+    size: image.size,
+    lastModified: image.lastModified,
+    sha256: image.sha256,
+    storageType: image.storageType
+  };
+
+  const result = await firestoreRequest(
+    "/images/register",
+    {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }
+  );
+
+  // Prevent local updates under another account.
+
+  if (
+    !currentUser ||
+    currentUser.uid !== ownerUid
+  ) {
+    throw new Error(
+      "User changed during image synchronization."
+    );
+  }
+
+  // Update the local IndexedDB record.
+
+  const db = await openImageDatabase();
+
+  const updatedImage = await new Promise(
+    (resolve, reject) => {
+
+      const transaction = db.transaction(
+        IMAGE_STORE_NAME,
+        "readwrite"
+      );
+
+      const store = transaction.objectStore(
+        IMAGE_STORE_NAME
+      );
+
+      const request = store.get(image.imageId);
+
+      let updatedRecord = null;
+
+      request.onsuccess = () => {
+
+        const record = request.result;
+
+        if (
+          !record ||
+          record.ownerUid !== ownerUid
+        ) {
+          transaction.abort();
+          reject(
+            new Error("Local image record not found.")
+          );
+          return;
+        }
+
+        updatedRecord = {
+          ...record,
+          registryStatus: "registered",
+          registrySyncedAt: Date.now()
+        };
+
+        store.put(updatedRecord);
+
+      };
+
+      request.onerror = () => {
+        reject(request.error);
+      };
+
+      transaction.oncomplete = () => {
+        resolve(updatedRecord);
+      };
+
+      transaction.onerror = () => {
+        reject(transaction.error);
+      };
+
+      transaction.onabort = () => {
+        reject(
+          transaction.error ||
+          new Error("Local image update was aborted.")
+        );
+      };
+
+    }
+  );
+
+  return {
+    ...result,
+    localImage: updatedImage
+  };
+
+}
+
+
+// ==========================================
+// SYNC BUTTON EVENT
+// ==========================================
+
+$("syncImageMetadata").addEventListener(
+  "click",
+  async () => {
+
+    if (!currentDetailImage) return;
+
+    const button = $("syncImageMetadata");
+    const status = $("imageDetailStatus");
+
+    const image = currentDetailImage;
+
+    button.disabled = true;
+    button.textContent = "Syncing...";
+
+    status.textContent =
+      "Registering image metadata...";
+
+    try {
+
+      const result =
+        await syncImageMetadataToFirestore(image);
+
+      currentDetailImage = result.localImage;
+
+      button.textContent = "✓ Synced to Firestore";
+
+      status.textContent =
+        "Image metadata successfully registered in Firestore.";
+
+    } catch (error) {
+
+      button.textContent = "Retry Metadata Sync";
+
+      status.textContent =
+        "Sync failed: " + error.message;
+
+    } finally {
+
+      button.disabled = false;
+
+    }
+
+  }
+);
+
 // Select current image as reference
 
 $("useImageReference").addEventListener(
