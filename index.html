@@ -1104,7 +1104,54 @@ body.light .user .bubble {
   color: var(--muted);
   font-size: 12px;
 }
+  
+.image-cloud-summary {
+  margin: 12px 14px 0;
+  padding: 11px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel2);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.7;
+}
 
+.image-cloud-only-list {
+  padding: 0 14px;
+}
+
+.image-cloud-only-item {
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg);
+}
+
+.image-cloud-only-item strong {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.image-cloud-only-item span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.image-library-status {
+  display: inline-block;
+  margin-top: 7px;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 10px;
+}
+  
 .image-library-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1726,7 +1773,13 @@ body.light .user .bubble {
       </button>
 
     </div>
+    
+    <div id="imageCloudSummary" class="image-cloud-summary">
+     Checking cloud registry...
+    </div>
 
+    <div id="imageCloudOnlyList" class="image-cloud-only-list"></div>
+    
     <div id="imageLibraryGrid" class="image-library-grid">
     </div>
 
