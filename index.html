@@ -4167,7 +4167,15 @@ async function openImageDetail(imageId) {
 
     updateReferenceButton();
 
-    $("imageDetailStatus").textContent = "";
+    $("imageDetailStatus").textContent =
+  image.registryStatus === "registered"
+    ? "✓ Metadata synced to Firestore."
+    : "Image metadata has not been synced yet.";
+
+$("syncImageMetadata").textContent =
+  image.registryStatus === "registered"
+    ? "✓ Synced to Firestore"
+    : "Sync Metadata to Firestore";
 
     imageDetailOverlay.classList.add("open");
 
