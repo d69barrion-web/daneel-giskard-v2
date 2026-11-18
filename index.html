@@ -3996,82 +3996,245 @@ function clearImageLibraryPreviews() {
 
 
 // Display the saved images
-
 async function renderImageLibrary() {
 
   imageLibraryGrid.innerHTML = "";
+  imageCloudOnlyList.innerHTML = "";
 
   clearImageLibraryPreviews();
 
   imageLibraryEmpty.classList.add("hidden");
 
-  imageLibraryCount.textContent = "Loading images...";
+  imageLibraryCount.textContent = "Loading local images...";
+
+  imageCloudSummary.textContent =
+    "Checking cloud registry...";
+
+  if (!currentUser) {
+    imageLibraryCount.textContent =
+      "Please sign in to access your images.";
+
+    imageCloudSummary.textContent =
+      "Cloud registry unavailable: not signed in.";
+
+    return;
+  }
+
+  const ownerUid = currentUser.uid;
+
+  let localImages = [];
+  let cloudImages = [];
+
+  let localError = null;
+  let cloudError = null;
+
+  // LOAD LOCAL IMAGES
 
   try {
 
-    const images = await getAllLocalImages();
+    localImages = await getAllLocalImages();
+
+  } catch (error) {
+
+    localError = error;
+
+  }
+
+  // LOAD FIRESTORE REGISTRY
+
+  try {
+
+    const data = await firestoreRequest(
+      "/images",
+      {
+        method: "GET"
+      }
+    );
+
+    if (!Array.isArray(data.images)) {
+      throw new Error(
+        "Invalid cloud registry response."
+      );
+    }
+
+    cloudImages = data.images;
+
+  } catch (error) {
+
+    cloudError = error;
+
+  }
+
+  // Prevent displaying another account's data
+  // if the signed-in user changed during loading.
+
+  if (
+    !currentUser ||
+    currentUser.uid !== ownerUid
+  ) {
 
     imageLibraryCount.textContent =
-      images.length + " saved image(s)";
+      "Account changed. Please reopen the library.";
 
-    if (images.length === 0) {
+    imageCloudSummary.textContent =
+      "Registry display cancelled.";
 
-      imageLibraryEmpty.classList.remove("hidden");
+    return;
 
-      return;
+  }
+
+  // LOCAL STORAGE ERROR
+
+  if (localError) {
+
+    imageLibraryCount.textContent =
+      "Unable to load local images.";
+
+    showStatus(
+      "Local Image Library error: " +
+      localError.message
+    );
+
+  } else {
+
+    imageLibraryCount.textContent =
+      localImages.length +
+      " image(s) on this device";
+
+  }
+
+  // If cloud request failed, preserve local display.
+
+  if (cloudError) {
+
+    imageCloudSummary.textContent =
+      "Cloud registry unavailable. " +
+      "Local images are still displayed. " +
+      "Error: " + cloudError.message;
+
+  }
+
+  // BUILD CLOUD LOOKUP
+
+  const cloudMap = new Map();
+
+  cloudImages.forEach(image => {
+
+    if (image && image.imageId) {
+      cloudMap.set(image.imageId, image);
+    }
+
+  });
+
+  const localIds = new Set(
+    localImages.map(image => image.imageId)
+  );
+
+  let verifiedSynced = 0;
+  let hashMismatch = 0;
+  let hashUnverified = 0;
+  let localOnly = 0;
+
+  // DISPLAY LOCAL IMAGES
+
+  localImages.forEach(image => {
+
+    const cloudRecord =
+      cloudMap.get(image.imageId);
+
+    let statusText = "Local only";
+
+    if (!cloudRecord) {
+
+      localOnly++;
+
+    } else if (
+      image.sha256 &&
+      cloudRecord.sha256
+    ) {
+
+      if (image.sha256 === cloudRecord.sha256) {
+
+        verifiedSynced++;
+        statusText = "✓ Synced · Hash verified";
+
+      } else {
+
+        hashMismatch++;
+        statusText = "⚠ Hash mismatch";
+
+      }
+
+    } else {
+
+      hashUnverified++;
+      statusText = "Registry match · Hash unverified";
 
     }
 
-    images.forEach(image => {
+    const card = document.createElement("div");
+    card.className = "image-library-card";
 
-      const card = document.createElement("div");
-      card.className = "image-library-card";
+    const previewUrl = URL.createObjectURL(
+      image.blob
+    );
 
-      const previewUrl = URL.createObjectURL(image.blob);
+    imageLibraryPreviewUrls.push(previewUrl);
 
-      imageLibraryPreviewUrls.push(previewUrl);
+    const img = document.createElement("img");
 
-      const img = document.createElement("img");
+    img.src = previewUrl;
+    img.alt = image.filename || "Saved image";
+    img.loading = "lazy";
+    img.style.cursor = "pointer";
 
-        img.src = previewUrl;
-        img.alt = image.filename;
-        img.loading = "lazy";
+    img.addEventListener("click", () => {
+      openImageDetail(image.imageId);
+    });
 
-        img.style.cursor = "pointer";
+    const filename = document.createElement("div");
 
-        img.addEventListener("click", () => {
-        openImageDetail(image.imageId);
-      });
+    filename.className =
+      "image-library-filename";
 
-      const filename = document.createElement("div");
-      filename.className = "image-library-filename";
-      filename.textContent = image.filename;
+    filename.textContent =
+      image.filename || "Unnamed image";
 
-       filename.style.cursor = "pointer";
+    filename.style.cursor = "pointer";
 
-       filename.addEventListener("click", () => {
-       openImageDetail(image.imageId);
-      });
+    filename.addEventListener("click", () => {
+      openImageDetail(image.imageId);
+    });
 
-      const meta = document.createElement("div");
-      meta.className = "image-library-meta";
+    const meta = document.createElement("div");
 
-      meta.textContent =
-        formatImageSize(image.size) +
-        " • " +
-        new Date(image.createdAt).toLocaleDateString();
+    meta.className = "image-library-meta";
 
-      const actions = document.createElement("div");
-      actions.className = "image-library-actions";
+    meta.textContent =
+      formatImageSize(image.size || 0) +
+      " • " +
+      new Date(image.createdAt).toLocaleDateString();
 
-      // DOWNLOAD BUTTON
+    const status = document.createElement("div");
 
-      const downloadButton = document.createElement("button");
+    status.className = "image-library-status";
+    status.textContent = statusText;
 
-      downloadButton.type = "button";
-      downloadButton.textContent = "↓ Download";
+    const actions = document.createElement("div");
 
-      downloadButton.addEventListener("click", async () => {
+    actions.className = "image-library-actions";
+
+    // DOWNLOAD BUTTON
+
+    const downloadButton =
+      document.createElement("button");
+
+    downloadButton.type = "button";
+    downloadButton.textContent = "↓ Download";
+
+    downloadButton.addEventListener(
+      "click",
+      async () => {
 
         try {
 
@@ -4085,17 +4248,21 @@ async function renderImageLibrary() {
 
         }
 
-      });
+      }
+    );
 
-      // DELETE BUTTON
+    // DELETE BUTTON
 
-      const deleteButton = document.createElement("button");
+    const deleteButton =
+      document.createElement("button");
 
-      deleteButton.type = "button";
-      deleteButton.textContent = "Delete";
-      deleteButton.className = "delete-image-btn";
+    deleteButton.type = "button";
+    deleteButton.textContent = "Delete";
+    deleteButton.className = "delete-image-btn";
 
-      deleteButton.addEventListener("click", async () => {
+    deleteButton.addEventListener(
+      "click",
+      async () => {
 
         const confirmed = confirm(
           "Delete this saved image from the local library?"
@@ -4109,42 +4276,134 @@ async function renderImageLibrary() {
 
           await renderImageLibrary();
 
-          showStatus("Image deleted from local library.");
+          showStatus(
+            "Image deleted from local library."
+          );
 
         } catch (error) {
 
           showStatus(
-            "Could not delete image: " + error.message
+            "Could not delete image: " +
+            error.message
           );
 
         }
 
-      });
+      }
+    );
 
-      actions.appendChild(downloadButton);
-      actions.appendChild(deleteButton);
+    actions.appendChild(downloadButton);
+    actions.appendChild(deleteButton);
 
-      card.appendChild(img);
-      card.appendChild(filename);
-      card.appendChild(meta);
-      card.appendChild(actions);
+    card.appendChild(img);
+    card.appendChild(filename);
+    card.appendChild(meta);
+    card.appendChild(status);
+    card.appendChild(actions);
 
-      imageLibraryGrid.appendChild(card);
+    imageLibraryGrid.appendChild(card);
+
+  });
+
+  // CLOUD-ONLY RECORDS
+  // These are metadata records, not image files.
+
+  let cloudOnly = 0;
+
+  if (!cloudError) {
+
+    cloudImages.forEach(image => {
+
+      if (
+        !image ||
+        !image.imageId ||
+        localIds.has(image.imageId)
+      ) {
+        return;
+      }
+
+      cloudOnly++;
+
+      const item = document.createElement("div");
+
+      item.className = "image-cloud-only-item";
+
+      const title = document.createElement("strong");
+
+      title.textContent =
+        image.filename || "Unnamed cloud record";
+
+      const details = document.createElement("span");
+
+      details.textContent =
+        "Image ID: " + image.imageId +
+        " • " +
+        formatImageSize(Number(image.size) || 0);
+
+      const note = document.createElement("span");
+
+      note.textContent =
+        "Metadata exists in Firestore, but the original image is not available in this device's local library.";
+
+      item.appendChild(title);
+      item.appendChild(details);
+      item.appendChild(note);
+
+      imageCloudOnlyList.appendChild(item);
 
     });
 
-  } catch (error) {
+  }
 
-    imageLibraryCount.textContent = "Unable to load images.";
+  // CLOUD SUMMARY
 
-    showStatus(
-      "Image Library error: " + error.message
-    );
+  if (!cloudError) {
+
+    imageCloudSummary.textContent =
+      "Cloud registry: " + cloudImages.length +
+      " record(s) • " +
+      "Verified synced: " + verifiedSynced +
+      " • Local only: " + localOnly +
+      " • Cloud only: " + cloudOnly +
+      " • Hash mismatch: " + hashMismatch +
+      " • Hash unverified: " + hashUnverified;
+
+  }
+
+  // EMPTY STATE
+
+  if (
+    !localError &&
+    localImages.length === 0
+  ) {
+
+    imageLibraryEmpty.textContent =
+      "Walang original images na naka-save sa device na ito.";
+
+    imageLibraryEmpty.classList.remove("hidden");
+
+  }
+
+  // CLOUD-ONLY SECTION LABEL
+
+  if (cloudOnly > 0 && !cloudError) {
+
+    const heading = document.createElement("p");
+
+    heading.textContent =
+      "Cloud-only metadata records (" +
+      cloudOnly + ")";
+
+    heading.style.padding = "8px 0 0";
+    heading.style.fontSize = "12px";
+    heading.style.fontWeight = "600";
+
+    imageCloudOnlyList.prepend(heading);
 
   }
 
 }
-  
+      
 // ==========================================
 // IMAGE DETAIL VIEWER
 // ==========================================
