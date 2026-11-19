@@ -814,6 +814,43 @@ async function executeTool(
   }
 }
 
+async function getUserOpenAIImageFileId(uid, imageId) {
+
+  if (
+    typeof imageId !== "string" ||
+    !/^img_[a-z0-9]{8,64}$/.test(imageId)
+  ) {
+    const error = new Error("Invalid reference image ID.");
+    error.status = 400;
+    throw error;
+  }
+
+  const snapshot = await getUserImagesCollection(uid)
+    .doc(imageId)
+    .get();
+
+  if (!snapshot.exists) {
+    const error = new Error("Reference image was not found.");
+    error.status = 404;
+    throw error;
+  }
+
+  const image = snapshot.data() || {};
+
+  if (
+    image.status !== "uploaded_to_openai" ||
+    typeof image.openaiFileId !== "string" ||
+    !image.openaiFileId
+  ) {
+    const error = new Error(
+      "Reference image has not been successfully uploaded to OpenAI."
+    );
+    error.status = 409;
+    throw error;
+  }
+
+  return image.openaiFileId;
+}
 
 // ==========================================
 // 8. OPENAI TOOL-CALLING ORCHESTRATOR
@@ -822,7 +859,8 @@ async function executeTool(
 async function runDaneel({
   user,
   message,
-  history
+  history,
+  imageFileId
 }) {
 
   if (!openai) {
@@ -832,12 +870,24 @@ async function runDaneel({
   }
 
   const input = [
-    ...history,
-    {
-      role: "user",
-      content: message
-    }
-  ];
+  ...history,
+  {
+    role: "user",
+    content: imageFileId
+      ? [
+          {
+            type: "input_text",
+            text: message
+          },
+          {
+            type: "input_image",
+            file_id: imageFileId,
+            detail: "auto"
+          }
+        ]
+      : message
+  }
+];
 
   const roundUsage = [];
 
@@ -2236,7 +2286,30 @@ app.post(
         };
 
       });
+      
+const referenceImageId = req.body?.referenceImageId;
 
+if (
+  referenceImageId !== undefined &&
+  referenceImageId !== null &&
+  (
+    typeof referenceImageId !== "string" ||
+    !/^img_[a-z0-9]{8,64}$/.test(referenceImageId)
+  )
+) {
+  return res.status(400).json({
+    ok: false,
+    error: "Invalid reference image ID."
+  });
+}
+
+const imageFileId = referenceImageId
+  ? await getUserOpenAIImageFileId(
+      req.user.uid,
+      referenceImageId
+    )
+  : null;
+      
       // Check and lock this user's credits only after
       // validating the request, but before any OpenAI call.
       await reserveUserCredits(
@@ -2246,10 +2319,11 @@ app.post(
       creditsLockAcquired = true;
 
       const result = await runDaneel({
-        user: req.user,
-        message: message.trim(),
-        history: cleanHistory
-      });
+  user: req.user,
+  message: message.trim(),
+  history: cleanHistory,
+  imageFileId
+});
 
       // Calculate the total across every Responses API round,
       // then atomically deduct it from this user's Firestore balance.
