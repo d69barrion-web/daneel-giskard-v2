@@ -1,7 +1,7 @@
 
 import express from "express";
 import cors from "cors";
-import OpenAI from "openai";
+import OpenAI, { toFile } from "openai";
 import admin from "firebase-admin";
 import multer from "multer";
 import {
@@ -38,6 +38,61 @@ const openai = process.env.OPENAI_API_KEY
     })
   : null;
 
+// ==========================================
+// OPENAI IMAGE FILE UPLOAD
+// ==========================================
+
+async function uploadImageToOpenAI(file) {
+
+  if (!openai) {
+    throw new Error(
+      "OpenAI API key is not configured."
+    );
+  }
+
+  if (!file || !Buffer.isBuffer(file.buffer)) {
+    throw new Error(
+      "Invalid image buffer."
+    );
+  }
+
+  const safeFilename =
+    String(file.originalname || "image")
+      .replace(/[^\w.\-() ]/g, "_")
+      .slice(0, 255) || "image";
+
+  const uploadableFile = await toFile(
+    file.buffer,
+    safeFilename,
+    {
+      type: file.mimetype
+    }
+  );
+
+  const uploadedFile = await openai.files.create({
+    file: uploadableFile,
+    purpose: "user_data"
+  });
+
+  if (
+    !uploadedFile ||
+    typeof uploadedFile.id !== "string" ||
+    !uploadedFile.id
+  ) {
+    throw new Error(
+      "OpenAI did not return a valid file ID."
+    );
+  }
+
+  return {
+    fileId: uploadedFile.id,
+    filename: uploadedFile.filename,
+    bytes: uploadedFile.bytes,
+    purpose: uploadedFile.purpose,
+    createdAt: uploadedFile.created_at
+  };
+
+}
 
 // ==========================================
 // 2. CORS AND REQUEST CONFIGURATION
