@@ -82,6 +82,13 @@ app.use(
 const IMAGE_UPLOAD_MAX_BYTES =
   20 * 1024 * 1024; // 20 MB
 
+const ALLOWED_IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif"
+]);
+
 const imageUpload = multer({
 
   storage: multer.memoryStorage(),
@@ -95,6 +102,109 @@ const imageUpload = multer({
   }
 
 });
+
+// ==========================================
+// IMAGE FILE SIGNATURE VALIDATION
+// ==========================================
+
+function detectImageMimeType(buffer) {
+
+  if (!Buffer.isBuffer(buffer)) {
+    return null;
+  }
+
+  // JPEG
+  if (
+    buffer.length >= 3 &&
+    buffer[0] === 0xFF &&
+    buffer[1] === 0xD8 &&
+    buffer[2] === 0xFF
+  ) {
+    return "image/jpeg";
+  }
+
+  // PNG
+  if (
+    buffer.length >= 8 &&
+    buffer.subarray(0, 8).equals(
+      Buffer.from([
+        0x89, 0x50, 0x4E, 0x47,
+        0x0D, 0x0A, 0x1A, 0x0A
+      ])
+    )
+  ) {
+    return "image/png";
+  }
+
+  // WEBP
+  if (
+    buffer.length >= 12 &&
+    buffer.toString("ascii", 0, 4) === "RIFF" &&
+    buffer.toString("ascii", 8, 12) === "WEBP"
+  ) {
+    return "image/webp";
+  }
+
+  // GIF
+  if (
+    buffer.length >= 6 &&
+    (
+      buffer.toString("ascii", 0, 6) === "GIF87a" ||
+      buffer.toString("ascii", 0, 6) === "GIF89a"
+    )
+  ) {
+    return "image/gif";
+  }
+
+  return null;
+}
+
+// ==========================================
+// SINGLE IMAGE UPLOAD MIDDLEWARE
+// ==========================================
+
+function parseSingleImageUpload(req, res, next) {
+
+  imageUpload.single("image")(
+    req,
+    res,
+    error => {
+
+      if (!error) {
+        return next();
+      }
+
+      if (error instanceof multer.MulterError) {
+
+        const status =
+          error.code === "LIMIT_FILE_SIZE"
+            ? 413
+            : 400;
+
+        return res.status(status).json({
+          ok: false,
+          error:
+            error.code === "LIMIT_FILE_SIZE"
+              ? "Image exceeds the 20 MB upload limit."
+              : "Invalid image upload request."
+        });
+
+      }
+
+      console.error(
+        "Image multipart parsing failed:",
+        error.message
+      );
+
+      return res.status(400).json({
+        ok: false,
+        error: "Unable to process image upload."
+      });
+
+    }
+  );
+
+}
 
 // ==========================================
 // 3. FIREBASE ADMIN INITIALIZATION
@@ -897,6 +1007,199 @@ function getUserImagesCollection(uid) {
 
 }
 
+// ==========================================
+// AUTHENTICATED IMAGE UPLOAD VALIDATION
+// ==========================================
+
+app.post(
+  "/images/upload",
+  requireAuth,
+  parseSingleImageUpload,
+  async (req, res) => {
+
+    try {
+
+      // ------------------------------------
+      // VALIDATE UPLOADED FILE
+      // ------------------------------------
+
+      const file = req.file;
+
+      if (!file || !file.buffer) {
+
+        return res.status(400).json({
+          ok: false,
+          error: "Image file is required."
+        });
+
+      }
+
+
+      // ------------------------------------
+      // VALIDATE IMAGE ID
+      // ------------------------------------
+
+      const imageId = req.body?.imageId;
+
+      if (
+        typeof imageId !== "string" ||
+        !/^img_[a-z0-9]{8,64}$/.test(imageId)
+      ) {
+
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid image ID."
+        });
+
+      }
+
+
+      // ------------------------------------
+      // VALIDATE DECLARED MIME TYPE
+      // ------------------------------------
+
+      if (
+        !ALLOWED_IMAGE_MIME_TYPES.has(
+          file.mimetype
+        )
+      ) {
+
+        return res.status(415).json({
+          ok: false,
+          error: "Unsupported image format."
+        });
+
+      }
+
+
+      // ------------------------------------
+      // VERIFY ACTUAL FILE SIGNATURE
+      // ------------------------------------
+
+      const detectedMimeType =
+        detectImageMimeType(file.buffer);
+
+      if (
+        !detectedMimeType ||
+        detectedMimeType !== file.mimetype
+      ) {
+
+        return res.status(415).json({
+          ok: false,
+          error: "Image file signature does not match its MIME type."
+        });
+
+      }
+
+
+      // ------------------------------------
+      // CALCULATE ACTUAL SHA-256
+      // ------------------------------------
+
+      const actualSha256 = createHash("sha256")
+        .update(file.buffer)
+        .digest("hex");
+
+
+      // ------------------------------------
+      // GET AUTHENTICATED USER'S REGISTRY
+      // ------------------------------------
+
+      const imageRef =
+        getUserImagesCollection(
+          req.user.uid
+        ).doc(imageId);
+
+      const snapshot = await imageRef.get();
+
+
+      // ------------------------------------
+      // REQUIRE EXISTING REGISTRY RECORD
+      // ------------------------------------
+
+      if (!snapshot.exists) {
+
+        return res.status(404).json({
+          ok: false,
+          error: "Image is not registered in this account."
+        });
+
+      }
+
+      const registered = snapshot.data();
+
+
+      // ------------------------------------
+      // VERIFY ORIGINAL IMAGE METADATA
+      // ------------------------------------
+
+      if (
+        registered.storageType !== "local" ||
+        registered.sha256 !== actualSha256 ||
+        registered.size !== file.size ||
+        registered.mimeType !== detectedMimeType
+      ) {
+
+        return res.status(409).json({
+          ok: false,
+          error: "Uploaded image does not match its registered metadata."
+        });
+
+      }
+
+
+      // ------------------------------------
+      // PREVENT DUPLICATE OPENAI UPLOAD
+      // ------------------------------------
+
+      if (registered.openaiFileId) {
+
+        return res.status(409).json({
+          ok: false,
+          error: "This image already has an OpenAI file ID.",
+          imageId
+        });
+
+      }
+
+
+      // ------------------------------------
+      // VALIDATION SUCCESS
+      // ------------------------------------
+
+      return res.status(200).json({
+
+        ok: true,
+
+        message: "Image validation successful.",
+
+        image: {
+          imageId,
+          filename: file.originalname,
+          mimeType: detectedMimeType,
+          size: file.size,
+          sha256: actualSha256,
+          validated: true
+        }
+
+      });
+
+    } catch (error) {
+
+      console.error(
+        "Image upload validation failed:",
+        error.message
+      );
+
+      return res.status(500).json({
+        ok: false,
+        error: "Unable to validate image upload."
+      });
+
+    }
+
+  }
+);
 
 // ==========================================
 // REGISTER OR UPDATE IMAGE METADATA
@@ -963,8 +1266,7 @@ app.post(
 
       if (
         typeof mimeType !== "string" ||
-        !mimeType.startsWith("image/") ||
-        mimeType.length > 100
+        !ALLOWED_IMAGE_MIME_TYPES.has(mimeType)
       ) {
 
         return res.status(400).json({
@@ -982,7 +1284,7 @@ app.post(
       if (
         !Number.isSafeInteger(size) ||
         size <= 0 ||
-        size > 100 * 1024 * 1024
+        size > IMAGE_UPLOAD_MAX_BYTES
       ) {
 
         return res.status(400).json({
