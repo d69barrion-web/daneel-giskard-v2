@@ -1072,6 +1072,10 @@ app.post(
   parseSingleImageUpload,
   async (req, res) => {
 
+    let imageRef = null;
+    let uploadToken = null;
+    let uploadedFile = null;
+
     try {
 
       // ------------------------------------
@@ -1081,14 +1085,11 @@ app.post(
       const file = req.file;
 
       if (!file || !file.buffer) {
-
         return res.status(400).json({
           ok: false,
           error: "Image file is required."
         });
-
       }
-
 
       // ------------------------------------
       // VALIDATE IMAGE ID
@@ -1100,32 +1101,24 @@ app.post(
         typeof imageId !== "string" ||
         !/^img_[a-z0-9]{8,64}$/.test(imageId)
       ) {
-
         return res.status(400).json({
           ok: false,
           error: "Invalid image ID."
         });
-
       }
-
 
       // ------------------------------------
       // VALIDATE DECLARED MIME TYPE
       // ------------------------------------
 
       if (
-        !ALLOWED_IMAGE_MIME_TYPES.has(
-          file.mimetype
-        )
+        !ALLOWED_IMAGE_MIME_TYPES.has(file.mimetype)
       ) {
-
         return res.status(415).json({
           ok: false,
           error: "Unsupported image format."
         });
-
       }
-
 
       // ------------------------------------
       // VERIFY ACTUAL FILE SIGNATURE
@@ -1138,14 +1131,11 @@ app.post(
         !detectedMimeType ||
         detectedMimeType !== file.mimetype
       ) {
-
         return res.status(415).json({
           ok: false,
           error: "Image file signature does not match its MIME type."
         });
-
       }
-
 
       // ------------------------------------
       // CALCULATE ACTUAL SHA-256
@@ -1155,38 +1145,28 @@ app.post(
         .update(file.buffer)
         .digest("hex");
 
-
       // ------------------------------------
       // GET AUTHENTICATED USER'S REGISTRY
       // ------------------------------------
 
-      const imageRef =
-        getUserImagesCollection(
-          req.user.uid
-        ).doc(imageId);
-
-      const snapshot = await imageRef.get();
-
+      imageRef = getUserImagesCollection(
+        req.user.uid
+      ).doc(imageId);
 
       // ------------------------------------
-      // REQUIRE EXISTING REGISTRY RECORD
+      // VERIFY EXISTING REGISTRY RECORD
       // ------------------------------------
 
-      if (!snapshot.exists) {
+      const initialSnapshot = await imageRef.get();
 
+      if (!initialSnapshot.exists) {
         return res.status(404).json({
           ok: false,
           error: "Image is not registered in this account."
         });
-
       }
 
-      const registered = snapshot.data();
-
-
-      // ------------------------------------
-      // VERIFY ORIGINAL IMAGE METADATA
-      // ------------------------------------
+      const registered = initialSnapshot.data();
 
       if (
         registered.storageType !== "local" ||
@@ -1194,47 +1174,181 @@ app.post(
         registered.size !== file.size ||
         registered.mimeType !== detectedMimeType
       ) {
-
         return res.status(409).json({
           ok: false,
           error: "Uploaded image does not match its registered metadata."
         });
-
       }
 
-
       // ------------------------------------
-      // PREVENT DUPLICATE OPENAI UPLOAD
+      // RESERVE UPLOAD USING TRANSACTION
       // ------------------------------------
 
-      if (registered.openaiFileId) {
+      uploadToken = randomUUID();
 
-        return res.status(409).json({
-          ok: false,
-          error: "This image already has an OpenAI file ID.",
-          imageId
+      const nowMs = Date.now();
+      const reservationExpiryMs = 10 * 60 * 1000;
+
+      const reservation = await getFirestore()
+        .runTransaction(async transaction => {
+
+          const snapshot = await transaction.get(imageRef);
+
+          if (!snapshot.exists) {
+            const error = new Error(
+              "Image registry record no longer exists."
+            );
+            error.status = 404;
+            throw error;
+          }
+
+          const current = snapshot.data();
+
+          if (current.sha256 !== actualSha256) {
+            const error = new Error(
+              "Image metadata changed during upload."
+            );
+            error.status = 409;
+            throw error;
+          }
+
+          // Already uploaded: do not upload again.
+          if (current.openaiFileId) {
+            return {
+              alreadyUploaded: true,
+              fileId: current.openaiFileId,
+              purpose: current.openaiPurpose || null
+            };
+          }
+
+          // Another request may be uploading this image.
+          if (
+            current.status === "uploading" &&
+            Number.isFinite(current.uploadStartedAtMs) &&
+            nowMs - current.uploadStartedAtMs <
+              reservationExpiryMs
+          ) {
+            return {
+              busy: true
+            };
+          }
+
+          transaction.update(imageRef, {
+
+            status: "uploading",
+
+            uploadToken,
+
+            uploadStartedAtMs: nowMs,
+
+            updatedAt:
+              admin.firestore.FieldValue.serverTimestamp()
+
+          });
+
+          return {
+            reserved: true
+          };
+
         });
 
+      if (reservation.alreadyUploaded) {
+        return res.status(200).json({
+          ok: true,
+          alreadyUploaded: true,
+          message: "Image is already uploaded to OpenAI.",
+          image: {
+            imageId,
+            openaiFileId: reservation.fileId,
+            openaiPurpose: reservation.purpose
+          }
+        });
       }
 
+      if (reservation.busy) {
+        return res.status(409).json({
+          ok: false,
+          error: "This image is currently being uploaded. Please try again shortly."
+        });
+      }
 
       // ------------------------------------
-      // VALIDATION SUCCESS
+      // UPLOAD IMAGE TO OPENAI
+      // ------------------------------------
+
+      uploadedFile = await uploadImageToOpenAI(file);
+
+      // ------------------------------------
+      // SAVE OPENAI FILE ID TO FIRESTORE
+      // ------------------------------------
+
+      await getFirestore().runTransaction(
+        async transaction => {
+
+          const snapshot = await transaction.get(imageRef);
+
+          if (!snapshot.exists) {
+            throw new Error(
+              "Image registry record disappeared after OpenAI upload."
+            );
+          }
+
+          const current = snapshot.data();
+
+          // Ensure this request still owns the reservation.
+          if (current.uploadToken !== uploadToken) {
+            throw new Error(
+              "Upload reservation changed. OpenAI file ID was not saved."
+            );
+          }
+
+          transaction.update(imageRef, {
+
+            status: "uploaded_to_openai",
+
+            openaiFileId: uploadedFile.fileId,
+
+            openaiPurpose: uploadedFile.purpose,
+
+            openaiFilename: uploadedFile.filename || null,
+
+            openaiBytes: uploadedFile.bytes || file.size,
+
+            openaiUploadedAt:
+              admin.firestore.FieldValue.serverTimestamp(),
+
+            openaiFileCreatedAt:
+              uploadedFile.createdAt || null,
+
+            uploadToken:
+              admin.firestore.FieldValue.delete(),
+
+            uploadStartedAtMs:
+              admin.firestore.FieldValue.delete(),
+
+            updatedAt:
+              admin.firestore.FieldValue.serverTimestamp()
+
+          });
+
+        }
+      );
+
+      // ------------------------------------
+      // SUCCESS
       // ------------------------------------
 
       return res.status(200).json({
 
         ok: true,
 
-        message: "Image validation successful.",
+        message: "Image successfully uploaded to OpenAI.",
 
         image: {
           imageId,
-          filename: file.originalname,
-          mimeType: detectedMimeType,
-          size: file.size,
-          sha256: actualSha256,
-          validated: true
+          openaiFileId: uploadedFile.fileId,
+          openaiPurpose: uploadedFile.purpose,
+          status: "uploaded_to_openai"
         }
 
       });
@@ -1242,13 +1356,82 @@ app.post(
     } catch (error) {
 
       console.error(
-        "Image upload validation failed:",
+        "Image upload failed:",
         error.message
       );
 
+      // ------------------------------------
+      // RELEASE RESERVATION ON FAILURE
+      // ------------------------------------
+
+      if (imageRef && uploadToken) {
+
+        try {
+
+          await getFirestore().runTransaction(
+            async transaction => {
+
+              const snapshot = await transaction.get(imageRef);
+
+              if (
+                snapshot.exists &&
+                snapshot.data().uploadToken === uploadToken
+              ) {
+
+                transaction.update(imageRef, {
+
+                  status: uploadedFile
+                    ? "upload_persistence_failed"
+                    : "upload_failed",
+
+                  uploadToken:
+                    admin.firestore.FieldValue.delete(),
+
+                  uploadStartedAtMs:
+                    admin.firestore.FieldValue.delete(),
+
+                  updatedAt:
+                    admin.firestore.FieldValue.serverTimestamp()
+
+                });
+
+              }
+
+            }
+          );
+
+        } catch (cleanupError) {
+
+          console.error(
+            "Image upload reservation cleanup failed:",
+            cleanupError.message
+          );
+
+        }
+
+      }
+
+      // ------------------------------------
+      // REPORT FAILURE
+      // ------------------------------------
+
+      if (uploadedFile) {
+
+        console.error(
+          "IMPORTANT: OpenAI file was created but Firestore persistence failed. File ID:",
+          uploadedFile.fileId
+        );
+
+      }
+
       return res.status(500).json({
+
         ok: false,
-        error: "Unable to validate image upload."
+
+        error: uploadedFile
+          ? "OpenAI upload succeeded, but saving its file ID failed. Please contact the administrator before retrying."
+          : "Unable to upload image to OpenAI."
+
       });
 
     }
