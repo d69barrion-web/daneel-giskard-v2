@@ -5026,16 +5026,29 @@ $("uploadImageToOpenAI").addEventListener(
           ? "Image was already uploaded. Existing OpenAI file ID recovered."
           : "Image successfully uploaded to OpenAI.";
 
-    } catch (error) {
+        } catch (error) {
 
-      button.textContent = "Retry OpenAI Upload";
+      if (error.uploadNeedsReview) {
 
-      status.textContent =
-        "Upload failed: " + error.message;
+        button.textContent = "Admin Check Required";
+
+        status.textContent =
+          "OpenAI may already have the image, but Firestore failed to save its File ID. Do not retry. Contact the administrator.";
+
+      } else {
+
+        button.textContent = "Retry OpenAI Upload";
+
+        status.textContent =
+          "Upload failed: " + error.message;
+
+      }
 
     } finally {
 
-      button.disabled = false;
+      button.disabled =
+        Boolean(currentDetailImage?.openaiFileId) ||
+        Boolean(currentDetailImage?.openaiUploadNeedsReview);
 
     }
 
