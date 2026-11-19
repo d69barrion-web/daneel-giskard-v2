@@ -4487,14 +4487,17 @@ async function openImageDetail(imageId) {
 
 uploadButton.disabled =
   image.registryStatus !== "registered" ||
-  Boolean(image.openaiFileId);
+  Boolean(image.openaiFileId) ||
+  Boolean(image.openaiUploadNeedsReview);
 
 uploadButton.textContent =
   image.openaiFileId
     ? "✓ Uploaded to OpenAI"
-    : image.registryStatus === "registered"
-      ? "Upload Image to OpenAI"
-      : "Sync Metadata First";
+    : image.openaiUploadNeedsReview
+      ? "Admin Check Required"
+      : image.registryStatus === "registered"
+        ? "Upload Image to OpenAI"
+        : "Sync Metadata First";
     
     updateReferenceButton();
 
