@@ -4679,6 +4679,66 @@ async function syncImageMetadataToFirestore(image) {
 // SYNC BUTTON EVENT
 // ==========================================
 
+  async function markImageUploadNeedsReview(image, ownerUid) {
+
+  const db = await openImageDatabase();
+
+  return await new Promise((resolve, reject) => {
+
+    const transaction = db.transaction(
+      IMAGE_STORE_NAME,
+      "readwrite"
+    );
+
+    const store = transaction.objectStore(
+      IMAGE_STORE_NAME
+    );
+
+    const request = store.get(image.imageId);
+
+    let updatedRecord = null;
+
+    request.onsuccess = () => {
+
+      const record = request.result;
+
+      if (
+        !record ||
+        record.ownerUid !== ownerUid ||
+        record.sha256 !== image.sha256
+      ) {
+        transaction.abort();
+        reject(new Error("Local image verification failed."));
+        return;
+      }
+
+      updatedRecord = {
+        ...record,
+        openaiStatus: "upload_persistence_failed",
+        openaiUploadNeedsReview: true
+      };
+
+      store.put(updatedRecord);
+
+    };
+
+    request.onerror = () => reject(request.error);
+
+    transaction.oncomplete = () => resolve(updatedRecord);
+
+    transaction.onerror = () => reject(transaction.error);
+
+    transaction.onabort = () => {
+      reject(
+        transaction.error ||
+        new Error("Could not update local image status.")
+      );
+    };
+
+  });
+
+}
+  
 // ==========================================
 // UPLOAD IMAGE TO OPENAI
 // ==========================================
@@ -4737,10 +4797,40 @@ async function uploadLocalImageToOpenAI(image) {
     );
   }
 
-  if (!response.ok || !data.ok) {
-    throw new Error(
-      data.error || "OpenAI image upload failed."
-    );
+    if (!response.ok || !data.ok) {
+
+    const errorMessage =
+      data.error || "OpenAI image upload failed.";
+
+    if (
+      errorMessage.includes(
+        "OpenAI upload succeeded, but saving its file ID failed."
+      )
+    ) {
+
+      const flaggedImage =
+        await markImageUploadNeedsReview(
+          image,
+          ownerUid
+        );
+
+      if (
+        currentDetailImage &&
+        currentDetailImage.imageId === image.imageId
+      ) {
+        currentDetailImage = flaggedImage;
+      }
+
+      const error = new Error(errorMessage);
+
+      error.uploadNeedsReview = true;
+
+      throw error;
+
+    }
+
+    throw new Error(errorMessage);
+
   }
 
   if (
