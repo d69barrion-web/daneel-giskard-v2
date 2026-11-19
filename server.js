@@ -3,7 +3,11 @@ import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
 import admin from "firebase-admin";
-import { randomUUID } from "node:crypto";
+import multer from "multer";
+import {
+  randomUUID,
+  createHash
+} from "node:crypto";
 
 // ==========================================
 // 1. BASIC CONFIGURATION
@@ -71,6 +75,26 @@ app.use(
   })
 );
 
+// ==========================================
+// IMAGE UPLOAD CONFIGURATION
+// ==========================================
+
+const IMAGE_UPLOAD_MAX_BYTES =
+  20 * 1024 * 1024; // 20 MB
+
+const imageUpload = multer({
+
+  storage: multer.memoryStorage(),
+
+  limits: {
+    fileSize: IMAGE_UPLOAD_MAX_BYTES,
+    files: 1,
+    fields: 1,
+    parts: 2,
+    fieldSize: 128
+  }
+
+});
 
 // ==========================================
 // 3. FIREBASE ADMIN INITIALIZATION
