@@ -3528,9 +3528,10 @@ async function sendMessage() {
         },
 
         body: JSON.stringify({
-          message,
-          history: previousMessages
-        })
+         message,
+         history: previousMessages,
+         referenceImageId: getSelectedReferenceImageId()
+       })
       }
     );
 
