@@ -1490,6 +1490,294 @@ app.post(
 );
 
 // ==========================================
+// DELETE IMAGE FROM OPENAI
+// ==========================================
+
+app.delete(
+  "/images/openai/:imageId",
+  requireAuth,
+  async (req, res) => {
+
+    let imageRef = null;
+    let fileId = null;
+    let deletionReserved = false;
+
+    try {
+
+      if (!openai) {
+        return res.status(503).json({
+          ok: false,
+          error: "OpenAI API key is not configured."
+        });
+      }
+
+      const imageId = req.params.imageId;
+
+      if (
+        typeof imageId !== "string" ||
+        !/^img_[a-z0-9]{8,64}$/.test(imageId)
+      ) {
+        return res.status(400).json({
+          ok: false,
+          error: "Invalid image ID."
+        });
+      }
+
+      // Use only the authenticated user's registry.
+      imageRef = getUserImagesCollection(
+        req.user.uid
+      ).doc(imageId);
+
+      // Reserve deletion using a Firestore transaction.
+      const reservation = await getFirestore()
+        .runTransaction(async transaction => {
+
+          const snapshot = await transaction.get(
+            imageRef
+          );
+
+          if (!snapshot.exists) {
+            const error = new Error(
+              "Image registry record was not found."
+            );
+            error.status = 404;
+            throw error;
+          }
+
+          const current = snapshot.data();
+
+          // Already deleted.
+          if (
+            current.status === "openai_deleted" &&
+            !current.openaiFileId
+          ) {
+            return {
+              alreadyDeleted: true
+            };
+          }
+
+          if (
+            typeof current.openaiFileId !== "string" ||
+            !current.openaiFileId
+          ) {
+            const error = new Error(
+              "No OpenAI file ID is registered for this image."
+            );
+            error.status = 409;
+            throw error;
+          }
+
+          if (
+            current.openaiPurpose !== "user_data"
+          ) {
+            const error = new Error(
+              "This image is not registered as an OpenAI user_data file."
+            );
+            error.status = 409;
+            throw error;
+          }
+
+          if (
+            current.status === "uploading"
+          ) {
+            const error = new Error(
+              "Image upload is still in progress."
+            );
+            error.status = 409;
+            throw error;
+          }
+
+          if (
+            current.status !== "uploaded_to_openai" &&
+            current.status !== "deleting_from_openai"
+          ) {
+            const error = new Error(
+              "Image is not in a valid state for deletion."
+            );
+            error.status = 409;
+            throw error;
+          }
+
+          fileId = current.openaiFileId;
+
+          // Prevent new Vision requests from using this image.
+          transaction.update(imageRef, {
+            status: "deleting_from_openai",
+            updatedAt:
+              admin.firestore.FieldValue.serverTimestamp()
+          });
+
+          return {
+            reserved: true
+          };
+
+        });
+
+      if (reservation.alreadyDeleted) {
+        return res.status(200).json({
+          ok: true,
+          alreadyDeleted: true,
+          message: "Image was already deleted from OpenAI."
+        });
+      }
+
+      deletionReserved = true;
+
+      // Delete the actual OpenAI file.
+      let openaiDeleted = false;
+
+      try {
+
+        const result = await openai.files.delete(
+          fileId
+        );
+
+        openaiDeleted =
+          result?.deleted === true;
+
+        if (!openaiDeleted) {
+          throw new Error(
+            "OpenAI did not confirm file deletion."
+          );
+        }
+
+      } catch (error) {
+
+        // A previous attempt may have deleted the file
+        // but failed before updating Firestore.
+        if (error.status === 404) {
+          openaiDeleted = true;
+        } else {
+          throw error;
+        }
+
+      }
+
+      // Clear the OpenAI reference in Firestore.
+      await getFirestore().runTransaction(
+        async transaction => {
+
+          const snapshot = await transaction.get(
+            imageRef
+          );
+
+          if (!snapshot.exists) {
+            throw new Error(
+              "Image registry record disappeared after OpenAI deletion."
+            );
+          }
+
+          const current = snapshot.data();
+
+          if (
+            current.openaiFileId !== fileId ||
+            current.status !== "deleting_from_openai"
+          ) {
+            throw new Error(
+              "Image registry changed during deletion."
+            );
+          }
+
+          transaction.update(imageRef, {
+
+            status: "openai_deleted",
+
+            openaiFileId:
+              admin.firestore.FieldValue.delete(),
+
+            openaiPurpose:
+              admin.firestore.FieldValue.delete(),
+
+            openaiFilename:
+              admin.firestore.FieldValue.delete(),
+
+            openaiBytes:
+              admin.firestore.FieldValue.delete(),
+
+            openaiUploadedAt:
+              admin.firestore.FieldValue.delete(),
+
+            openaiFileCreatedAt:
+              admin.firestore.FieldValue.delete(),
+
+            openaiDeletedAt:
+              admin.firestore.FieldValue.serverTimestamp(),
+
+            updatedAt:
+              admin.firestore.FieldValue.serverTimestamp()
+
+          });
+
+        }
+      );
+
+      return res.status(200).json({
+        ok: true,
+        deleted: true,
+        imageId,
+        message: "Image successfully deleted from OpenAI."
+      });
+
+    } catch (error) {
+
+      console.error(
+        "OpenAI image deletion failed:",
+        error.message
+      );
+
+      // Restore the previous usable status if the
+      // OpenAI deletion itself failed.
+      if (deletionReserved && imageRef && fileId) {
+
+        try {
+
+          await getFirestore().runTransaction(
+            async transaction => {
+
+              const snapshot = await transaction.get(
+                imageRef
+              );
+
+              if (
+                snapshot.exists &&
+                snapshot.data().openaiFileId === fileId &&
+                snapshot.data().status === "deleting_from_openai"
+              ) {
+
+                transaction.update(imageRef, {
+                  status: "uploaded_to_openai",
+                  updatedAt:
+                    admin.firestore.FieldValue.serverTimestamp()
+                });
+
+              }
+
+            }
+          );
+
+        } catch (restoreError) {
+
+          console.error(
+            "Could not restore image deletion status:",
+            restoreError.message
+          );
+
+        }
+
+      }
+
+      return res.status(error.status || 500).json({
+        ok: false,
+        error: error.message ||
+          "Unable to delete image from OpenAI."
+      });
+
+    }
+
+  }
+);
+
+// ==========================================
 // REGISTER OR UPDATE IMAGE METADATA
 // ==========================================
 
