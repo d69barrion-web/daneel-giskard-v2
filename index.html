@@ -4959,7 +4959,7 @@ $("syncImageMetadata").addEventListener(
   "click",
   async () => {
 
-    if (!currentDetailImage) return;
+    if (!currentDetailImage || isDeletingOpenAIImage) return;
 
     const button = $("syncImageMetadata");
     const status = $("imageDetailStatus");
@@ -5066,9 +5066,10 @@ $("uploadImageToOpenAI").addEventListener(
     } finally {
 
       button.disabled =
-        Boolean(currentDetailImage?.openaiFileId) ||
-        Boolean(currentDetailImage?.openaiUploadNeedsReview);
-
+      isDeletingOpenAIImage ||
+      currentDetailImage?.registryStatus !== "registered" ||
+      Boolean(currentDetailImage?.openaiFileId) ||
+      Boolean(currentDetailImage?.openaiUploadNeedsReview);
     }
 
   }
@@ -5252,9 +5253,14 @@ $("deleteImageFromOpenAI").addEventListener(
 
     const button = $("deleteImageFromOpenAI");
     const status = $("imageDetailStatus");
+    const uploadButton = $("uploadImageToOpenAI");
+
+    isDeletingOpenAIImage = true;
 
     button.disabled = true;
     button.textContent = "Deleting...";
+
+    uploadButton.disabled = true;
 
     status.textContent =
       "Deleting image from OpenAI...";
@@ -5282,13 +5288,9 @@ $("deleteImageFromOpenAI").addEventListener(
       button.textContent =
         "Delete from OpenAI";
 
-      // Allow upload again if desired.
-      const uploadButton =
-        $("uploadImageToOpenAI");
-
-      uploadButton.disabled = false;
-      uploadButton.textContent =
-        "Upload Image to OpenAI";
+      // Allow upload again after deletion is confirmed.
+       uploadButton.textContent =
+       "Upload Image to OpenAI";
 
       status.textContent =
         "✓ OpenAI copy deleted. " +
@@ -5305,7 +5307,19 @@ $("deleteImageFromOpenAI").addEventListener(
         "Deletion failed: " + error.message;
 
     }
+      
+     finally {
 
+  isDeletingOpenAIImage = false;
+
+  // Recalculate the correct Upload button state.
+  uploadButton.disabled =
+    !currentDetailImage ||
+    currentDetailImage.registryStatus !== "registered" ||
+    Boolean(currentDetailImage.openaiFileId) ||
+    Boolean(currentDetailImage.openaiUploadNeedsReview);
+
+}
   }
 );
 
