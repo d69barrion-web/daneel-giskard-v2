@@ -4959,7 +4959,7 @@ $("syncImageMetadata").addEventListener(
   "click",
   async () => {
 
-    if (!currentDetailImage || isDeletingOpenAIImage) return;
+    if (!currentDetailImage) return;
 
     const button = $("syncImageMetadata");
     const status = $("imageDetailStatus");
@@ -5008,7 +5008,7 @@ $("uploadImageToOpenAI").addEventListener(
   "click",
   async () => {
 
-    if (!currentDetailImage) return;
+    if (!currentDetailImage || isDeletingOpenAIImage) return;
 
     const button = $("uploadImageToOpenAI");
     const status = $("imageDetailStatus");
