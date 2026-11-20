@@ -4504,6 +4504,17 @@ uploadButton.textContent =
       : image.registryStatus === "registered"
         ? "Upload Image to OpenAI"
         : "Sync Metadata First";
+
+    const deleteButton =
+  $("deleteImageFromOpenAI");
+
+deleteButton.classList.toggle(
+  "hidden",
+  !image.openaiFileId
+);
+
+deleteButton.disabled =
+  !image.openaiFileId;
     
     updateReferenceButton();
 
