@@ -4493,6 +4493,7 @@ async function openImageDetail(imageId) {
     const uploadButton = $("uploadImageToOpenAI");
 
 uploadButton.disabled =
+  isDeletingOpenAIImage ||
   image.registryStatus !== "registered" ||
   Boolean(image.openaiFileId) ||
   Boolean(image.openaiUploadNeedsReview);
