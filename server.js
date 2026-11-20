@@ -1501,6 +1501,7 @@ app.delete(
     let imageRef = null;
     let fileId = null;
     let deletionReserved = false;
+    let openaiDeletionConfirmed = false;
 
     try {
 
@@ -1623,35 +1624,40 @@ app.delete(
 
       deletionReserved = true;
 
-      // Delete the actual OpenAI file.
-      let openaiDeleted = false;
+     // Delete the actual OpenAI file.
+     let openaiDeleted = false;
 
-      try {
+     try {
 
         const result = await openai.files.delete(
-          fileId
-        );
+        fileId
+      );
 
-        openaiDeleted =
-          result?.deleted === true;
+     openaiDeleted =
+      result?.deleted === true;
 
-        if (!openaiDeleted) {
-          throw new Error(
-            "OpenAI did not confirm file deletion."
-          );
-        }
+     if (!openaiDeleted) {
+       throw new Error(
+       "OpenAI did not confirm file deletion."
+      );
+    }
 
-      } catch (error) {
+    } catch (error) {
 
-        // A previous attempt may have deleted the file
-        // but failed before updating Firestore.
-        if (error.status === 404) {
-          openaiDeleted = true;
-        } else {
-          throw error;
-        }
+   // A previous attempt may have deleted the file
+   // but failed before updating Firestore.
+   if (error.status === 404) {
+    openaiDeleted = true;
+   } else {
+    throw error;
+   }
 
-      }
+ }
+
+// OpenAI deletion is now confirmed.
+// Do not restore the old uploaded status if
+// the following Firestore cleanup fails.
+openaiDeletionConfirmed = true;
 
       // Clear the OpenAI reference in Firestore.
       await getFirestore().runTransaction(
@@ -1727,7 +1733,12 @@ app.delete(
 
       // Restore the previous usable status if the
       // OpenAI deletion itself failed.
-      if (deletionReserved && imageRef && fileId) {
+      if (
+          deletionReserved &&
+          !openaiDeletionConfirmed &&
+          imageRef &&
+          fileId
+         ) {
 
         try {
 
