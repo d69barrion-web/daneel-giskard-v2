@@ -5072,6 +5072,241 @@ $("uploadImageToOpenAI").addEventListener(
   }
 );
 
+// ==========================================
+// DELETE IMAGE FROM OPENAI
+// ==========================================
+
+async function deleteImageFromOpenAI(image) {
+
+  if (!currentUser) {
+    throw new Error("Please sign in first.");
+  }
+
+  if (
+    !image ||
+    !image.imageId ||
+    !image.openaiFileId
+  ) {
+    throw new Error(
+      "No uploaded OpenAI file is available."
+    );
+  }
+
+  const ownerUid = currentUser.uid;
+
+  if (image.ownerUid !== ownerUid) {
+    throw new Error(
+      "Image ownership verification failed."
+    );
+  }
+
+  const token = await currentUser.getIdToken();
+
+  const response = await fetch(
+    API_BASE_URL +
+      "/images/openai/" +
+      encodeURIComponent(image.imageId),
+    {
+      method: "DELETE",
+      headers: {
+        "Authorization": "Bearer " + token
+      }
+    }
+  );
+
+  let data;
+
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error(
+      "Invalid response from deletion server."
+    );
+  }
+
+  if (!response.ok || !data.ok) {
+    throw new Error(
+      data.error ||
+      "OpenAI image deletion failed."
+    );
+  }
+
+  if (
+    !currentUser ||
+    currentUser.uid !== ownerUid
+  ) {
+    throw new Error(
+      "User changed during image deletion."
+    );
+  }
+
+  // Update local metadata only.
+  // Preserve the original image Blob.
+
+  const db = await openImageDatabase();
+
+  const updatedImage = await new Promise(
+    (resolve, reject) => {
+
+      const transaction = db.transaction(
+        IMAGE_STORE_NAME,
+        "readwrite"
+      );
+
+      const store = transaction.objectStore(
+        IMAGE_STORE_NAME
+      );
+
+      const request = store.get(image.imageId);
+
+      let updatedRecord = null;
+
+      request.onsuccess = () => {
+
+        const record = request.result;
+
+        if (
+          !record ||
+          record.ownerUid !== ownerUid ||
+          record.sha256 !== image.sha256
+        ) {
+          transaction.abort();
+
+          reject(
+            new Error(
+              "Local image verification failed."
+            )
+          );
+
+          return;
+        }
+
+        updatedRecord = {
+          ...record,
+
+          openaiFileId: null,
+          openaiPurpose: null,
+          openaiStatus: "openai_deleted",
+          openaiUploadedAt: null,
+          openaiDeletedAt: Date.now()
+        };
+
+        store.put(updatedRecord);
+
+      };
+
+      request.onerror = () => {
+        reject(request.error);
+      };
+
+      transaction.oncomplete = () => {
+        resolve(updatedRecord);
+      };
+
+      transaction.onerror = () => {
+        reject(transaction.error);
+      };
+
+      transaction.onabort = () => {
+        reject(
+          transaction.error ||
+          new Error(
+            "Local image update was aborted."
+          )
+        );
+      };
+
+    }
+  );
+
+  return {
+    ...data,
+    localImage: updatedImage
+  };
+
+}
+
+
+// ==========================================
+// DELETE FROM OPENAI BUTTON EVENT
+// ==========================================
+
+$("deleteImageFromOpenAI").addEventListener(
+  "click",
+  async () => {
+
+    if (!currentDetailImage) return;
+
+    const image = currentDetailImage;
+
+    const confirmed = confirm(
+      "Delete this image from OpenAI?\n\n" +
+      "The uploaded OpenAI copy will be deleted.\n\n" +
+      "Your original image in the local library " +
+      "will remain محفوظ and untouched."
+    );
+
+    if (!confirmed) return;
+
+    const button = $("deleteImageFromOpenAI");
+    const status = $("imageDetailStatus");
+
+    button.disabled = true;
+    button.textContent = "Deleting...";
+
+    status.textContent =
+      "Deleting image from OpenAI...";
+
+    try {
+
+      const result =
+        await deleteImageFromOpenAI(image);
+
+      currentDetailImage = result.localImage;
+
+      // Remove it as the active Vision reference.
+      if (
+        selectedReferenceImageId === image.imageId
+      ) {
+        selectedReferenceImageId = null;
+        updateReferenceButton();
+      }
+
+      $("detailOpenAIFileId").textContent =
+        "Deleted from OpenAI";
+
+      button.classList.add("hidden");
+
+      button.textContent =
+        "Delete from OpenAI";
+
+      // Allow upload again if desired.
+      const uploadButton =
+        $("uploadImageToOpenAI");
+
+      uploadButton.disabled = false;
+      uploadButton.textContent =
+        "Upload Image to OpenAI";
+
+      status.textContent =
+        "✓ OpenAI copy deleted. " +
+        "Your local original image is preserved.";
+
+    } catch (error) {
+
+      button.disabled = false;
+
+      button.textContent =
+        "Retry Delete from OpenAI";
+
+      status.textContent =
+        "Deletion failed: " + error.message;
+
+    }
+
+  }
+);
+
 // Select current image as reference
 
 $("useImageReference").addEventListener(
