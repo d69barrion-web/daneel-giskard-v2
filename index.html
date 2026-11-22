@@ -3307,7 +3307,7 @@ $("messages").querySelectorAll(".copy-message-btn")
 
         await navigator.clipboard.writeText(textToCopy);
 
-        button.textContent = "âœ“ Copied!";
+        button.textContent = "✓ Copied!";
 
       } catch (error) {
 
@@ -4269,7 +4269,7 @@ async function renderImageLibrary() {
       if (image.sha256 === cloudRecord.sha256) {
 
         verifiedSynced++;
-        statusText = "âœ“ Synced Â· Hash verified";
+        statusText = "✓ Synced Â· Hash verified";
 
       } else {
 
@@ -4601,7 +4601,7 @@ uploadButton.disabled =
 
 uploadButton.textContent =
   image.openaiFileId
-    ? "âœ“ Uploaded to OpenAI"
+    ? "✓ Uploaded to OpenAI"
     : image.openaiUploadNeedsReview
       ? "Admin Check Required"
       : image.registryStatus === "registered"
@@ -4623,12 +4623,12 @@ deleteButton.disabled =
 
     $("imageDetailStatus").textContent =
   image.registryStatus === "registered"
-    ? "âœ“ Metadata synced to Firestore."
+    ? "✓ Metadata synced to Firestore."
     : "Image metadata has not been synced yet.";
 
 $("syncImageMetadata").textContent =
   image.registryStatus === "registered"
-    ? "âœ“ Synced to Firestore"
+    ? "✓ Synced to Firestore"
     : "Sync Metadata to Firestore";
 
     imageDetailOverlay.classList.add("open");
@@ -4662,7 +4662,7 @@ function updateReferenceButton() {
   );
 
   button.textContent = isSelected
-    ? "âœ“ Selected as Reference"
+    ? "✓ Selected as Reference"
     : "Use as Reference";
 
 }
@@ -5080,7 +5080,7 @@ $("syncImageMetadata").addEventListener(
 
       currentDetailImage = result.localImage;
 
-      button.textContent = "âœ“ Synced to Firestore";
+      button.textContent = "✓ Synced to Firestore";
 
       status.textContent =
         "Image metadata successfully registered in Firestore.";
@@ -5139,7 +5139,7 @@ $("uploadImageToOpenAI").addEventListener(
         result.localImage.openaiFileId;
 
       button.textContent =
-        "âœ“ Uploaded to OpenAI";
+        "✓ Uploaded to OpenAI";
 
       status.textContent =
         result.alreadyUploaded
@@ -5394,7 +5394,7 @@ $("deleteImageFromOpenAI").addEventListener(
        "Upload Image to OpenAI";
 
       status.textContent =
-        "âœ“ OpenAI copy deleted. " +
+        "✓ OpenAI copy deleted. " +
         "Your local original image is preserved.";
 
     } catch (error) {
