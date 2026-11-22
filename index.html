@@ -4325,7 +4325,7 @@ async function renderImageLibrary() {
 
     meta.textContent =
       formatImageSize(image.size || 0) +
-      " â€¢ " +
+      " • " +
       new Date(image.createdAt).toLocaleDateString();
 
     const status = document.createElement("div");
@@ -4450,7 +4450,7 @@ async function renderImageLibrary() {
 
       details.textContent =
         "Image ID: " + image.imageId +
-        " â€¢ " +
+        " • " +
         formatImageSize(Number(image.size) || 0);
 
       const note = document.createElement("span");
