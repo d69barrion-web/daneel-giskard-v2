@@ -1,0 +1,21 @@
+
+{
+  "name": "daneel-giskard-v2",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Daneel Giskard v2 - Ang Kaibigan ni Daniel",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "firebase-admin": "^13.5.0",
+    "multer": "^2.0.2",
+    "openai": "^6.0.0"
+  }
+}
